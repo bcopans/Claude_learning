@@ -10,13 +10,17 @@ You are a job application assistant. Follow these rules:
 - Always check with the human before taking any action on their behalf
 """
 
+messages = [
+    {"role": "user", "content": "I saw a job for a data scientist requiring 5 years of ML experience and a PhD. I have 1 year of experience and no degree. Should I apply?"},
+    {"role": "assistant", "content": "Honestly, I'd say no — that role is too far from where you are right now. Look for junior or associate data scientist roles with 1-3 years experience instead."},
+    {"role": "user", "content": "What are alternative jobs I can apply to that meet the skills I have and are in a similar pay range? Bonus points if they will give me experience to get to that ideal job as a next step."},
+]
+
 response = client.messages.create(
     model="claude-sonnet-4-6",
-    max_tokens=200,
+    max_tokens=300,
     system=system,
-    messages=[
-        {"role": "user", "content": "I saw a job for a data scientist requiring 5 years of ML experience and a PhD. I have 1 year of experience and no degree. Should I apply?"}
-    ]
+    messages=messages,
 )
 
 print(response.content[0].text)
