@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PT Homework Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0f4f8;
+      --surface: #ffffff;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    header {
+      max-width: 700px;
+      margin: 0 auto 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    header p { font-size: 0.85rem; color: var(--muted); }
+
+    .main { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+
+    .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 14px; color: var(--text); }
+
+    /* ── Form ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .form-grid .full { grid-column: 1 / -1; }
+
+    label { font-size: 0.8rem; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; }
+
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      color: var(--text);
+      background: #fafafa;
+      transition: border-color .15s;
+      outline: none;
+    }
+
+    input:focus, textarea:focus, select:focus { border-color: var(--primary); background: #fff; }
+
+    textarea { resize: vertical; min-height: 60px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+    .btn-danger { background: #fee2e2; color: var(--danger); }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-ghost { background: var(--bg); color: var(--text); }
+    .btn-ghost:hover { background: var(--border); }
+    .btn-success { background: #dcfce7; color: var(--success); }
+    .btn-success:hover { background: #bbf7d0; }
+
+    .form-actions { margin-top: 14px; display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* ── Exercise list ── */
+    #exercise-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .exercise-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    }
+
+    .exercise-card.done { opacity: .6; }
+
+    .ex-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .ex-header:hover { background: #f8fafc; }
+
+    .ex-check {
+      width: 22px; height: 22px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.75rem;
+      transition: all .15s;
+    }
+
+    .exercise-card.done .ex-check {
+      background: var(--success);
+      border-color: var(--success);
+      color: #fff;
+    }
+
+    .ex-title { flex: 1; }
+    .ex-title strong { font-size: 0.95rem; }
+    .ex-title small { display: block; font-size: 0.78rem; color: var(--muted); margin-top: 1px; }
+
+    .ex-badges { display: flex; gap: 6px; flex-shrink: 0; }
+
+    .badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: #eff6ff;
+      color: var(--primary);
+    }
+
+    .ex-body {
+      padding: 0 16px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .25s ease, padding .25s;
+    }
+
+    .ex-body.open { max-height: 400px; padding: 0 16px 14px; }
+
+    .ex-notes { font-size: 0.85rem; color: var(--muted); margin-bottom: 10px; }
+
+    .session-dots { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+
+    .dot {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .dot.done { background: var(--success); border-color: var(--success); color: #fff; }
+
+    .ex-actions { display: flex; gap: 6px; }
+
+    /* ── Reminders ── */
+    .reminder-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
+    .reminder-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--bg);
+      border-radius: 6px;
+      font-size: 0.875rem;
+    }
+
+    .reminder-row span { flex: 1; }
+
+    /* ── Progress bar ── */
+    .progress-wrap { margin-top: 10px; }
+    .progress-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; display: flex; justify-content: space-between; }
+    .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--success); border-radius: 4px; transition: width .4s ease; }
+
+    /* ── Notification banner ── */
+    #notif-banner {
+      display: none;
+      background: #fefce8;
+      border: 1px solid #fde047;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      color: #854d0e;
+      max-width: 700px;
+      margin: 0 auto 12px;
+    }
+
+    #notif-banner button { margin-left: 8px; }
+
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 32px; color: var(--muted); font-size: 0.9rem; }
+
+    @media (max-width: 480px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-grid .full { grid-column: 1; }
+      .ex-badges { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="notif-banner">
+  Enable browser notifications to get daily reminders.
+  <button class="btn btn-sm btn-primary" onclick="requestNotifPermission()">Enable</button>
+  <button class="btn btn-sm btn-ghost" onclick="dismissBanner()">Dismiss</button>
+</div>
+
+<header>
+  <div>
+    <h1>PT Homework Tracker</h1>
+    <p id="date-label"></p>
+  </div>
+  <button class="btn btn-primary btn-sm" onclick="openForm()">+ Add Exercise</button>
+</header>
+
+<div class="main">
+
+  <!-- Progress summary -->
+  <div class="card" id="progress-card">
+    <h2>Today's Progress</h2>
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span>Exercises completed</span>
+        <span id="progress-text">0 / 0</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Exercise list -->
+  <div id="exercise-list">
+    <div class="empty" id="empty-msg">No exercises yet — add your first one above.</div>
+  </div>
+
+  <!-- Add / Edit form -->
+  <div class="card" id="form-card" style="display:none">
+    <h2 id="form-title">Add Exercise</h2>
+    <div class="form-grid">
+      <div class="full">
+        <label>Exercise Name *</label>
+        <input type="text" id="f-name" placeholder="e.g. Clamshells" />
+      </div>
+      <div class="full">
+        <label>Notes / Instructions</label>
+        <textarea id="f-notes" placeholder="Any notes from your therapist…"></textarea>
+      </div>
+      <div>
+        <label>Reps per set</label>
+        <input type="number" id="f-reps" min="1" value="10" />
+      </div>
+      <div>
+        <label>Sets per session</label>
+        <input type="number" id="f-sets" min="1" value="3" />
+      </div>
+      <div>
+        <label>Sessions per day</label>
+        <input type="number" id="f-times" min="1" max="10" value="1" />
+      </div>
+      <div>
+        <label>Side</label>
+        <select id="f-side">
+          <option value="">Both / N/A</option>
+          <option value="Left">Left</option>
+          <option value="Right">Right</option>
+          <option value="Both">Both sides</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeForm()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveExercise()">Save Exercise</button>
+    </div>
+  </div>
+
+  <!-- Reminders -->
+  <div class="card">
+    <h2>Daily Reminders</h2>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:10px;">Set times to be reminded to do your PT exercises.</p>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <div style="flex:1">
+        <label>Reminder Time</label>
+        <input type="time" id="reminder-time" value="09:00" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:.9rem" />
+      </div>
+      <button class="btn btn-primary" onclick="addReminder()">Add</button>
+    </div>
+    <div class="reminder-list" id="reminder-list"></div>
+  </div>
+
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────
+  const TODAY = new Date().toISOString().slice(0, 10);
+
+  let exercises = JSON.parse(localStorage.getItem('pt_exercises') || '[]');
+  let reminders = JSON.parse(localStorage.getItem('pt_reminders') || '[]');
+  let completions = JSON.parse(localStorage.getItem('pt_completions') || '{}');
+  let editingId = null;
+  let reminderTimers = [];
+
+  // ── Boot ───────────────────────────────────────────────────────────────
+  document.getElementById('date-label').textContent = new Date().toLocaleDateString(undefined, {
+    weekday: 'long', month: 'long', day: 'numeric'
+  });
+
+  checkNotifPermission();
+  render();
+  scheduleReminders();
+
+  // Reset completions at midnight
+  const msUntilMidnight = (() => {
+    const n = new Date(); const m = new Date(n); m.setHours(24,0,0,0); return m - n;
+  })();
+  setTimeout(() => { completions = {}; save(); render(); }, msUntilMidnight);
+
+  // ── Persistence ────────────────────────────────────────────────────────
+  function save() {
+    localStorage.setItem('pt_exercises', JSON.stringify(exercises));
+    localStorage.setItem('pt_reminders', JSON.stringify(reminders));
+    localStorage.setItem('pt_completions', JSON.stringify(completions));
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────
+  function render() {
+    renderExercises();
+    renderReminders();
+    updateProgress();
+  }
+
+  function renderExercises() {
+    const list = document.getElementById('exercise-list');
+    const empty = document.getElementById('empty-msg');
+
+    // Remove old exercise cards
+    list.querySelectorAll('.exercise-card').forEach(el => el.remove());
+
+    if (exercises.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    exercises.forEach(ex => {
+      const key = `${ex.id}_${TODAY}`;
+      const done = completions[key] || [];
+      const allDone = done.length >= ex.timesPerDay;
+
+      const card = document.createElement('div');
+      card.className = 'exercise-card' + (allDone ? ' done' : '');
+      card.dataset.id = ex.id;
+
+      const dots = Array.from({length: ex.timesPerDay}, (_, i) =>
+        `<div class="dot ${done.includes(i) ? 'done' : ''}" onclick="toggleSession('${ex.id}',${i})" title="Session ${i+1}">
+          ${done.includes(i) ? '✓' : i+1}
+        </div>`
+      ).join('');
+
+      const sideText = ex.side ? ` · ${ex.side}` : '';
+
+      card.innerHTML = `
+        <div class="ex-header" onclick="toggleExpand('${ex.id}')">
+          <div class="ex-check">${allDone ? '✓' : ''}</div>
+          <div class="ex-title">
+            <strong>${escHtml(ex.name)}</strong>
+            <small>${ex.reps} reps × ${ex.sets} sets${sideText}</small>
+          </div>
+          <div class="ex-badges">
+            <span class="badge">${done.length}/${ex.timesPerDay}x today</span>
+          </div>
+        </div>
+        <div class="ex-body" id="body-${ex.id}">
+          ${ex.notes ? `<p class="ex-notes">${escHtml(ex.notes)}</p>` : ''}
+          <p style="font-size:.8rem;color:var(--muted);margin-bottom:6px;">Tap a circle to mark a session complete:</p>
+          <div class="session-dots">${dots}</div>
+          <div class="ex-actions">
+            <button class="btn btn-sm btn-ghost" onclick="editExercise('${ex.id}')">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteExercise('${ex.id}')">Delete</button>
+          </div>
+        </div>`;
+
+      list.appendChild(card);
+    });
+  }
+
+  function renderReminders() {
+    const list = document.getElementById('reminder-list');
+    list.innerHTML = '';
+    if (reminders.length === 0) {
+      list.innerHTML = '<p style="font-size:.82rem;color:var(--muted)">No reminders set.</p>';
+      return;
+    }
+    reminders.forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'reminder-row';
+      row.innerHTML = `<span>🔔 ${formatTime(r)}</span>
+        <button class="btn btn-sm btn-danger" onclick="deleteReminder('${r}')">Remove</button>`;
+      list.appendChild(row);
+    });
+  }
+
+  function updateProgress() {
+    const total = exercises.length;
+    let done = 0;
+    exercises.forEach(ex => {
+      const key = `${ex.id}_${TODAY}`;
+      const d = completions[key] || [];
+      if (d.length >= ex.timesPerDay) done++;
+    });
+    document.getElementById('progress-text').textContent = `${done} / ${total}`;
+    document.getElementById('progress-fill').style.width = total ? `${(done/total)*100}%` : '0%';
+  }
+
+  // ── Exercise actions ───────────────────────────────────────────────────
+  function toggleSession(id, sessionIdx) {
+    const key = `${id}_${TODAY}`;
+    let done = completions[key] || [];
+    if (done.includes(sessionIdx)) {
+      done = done.filter(i => i !== sessionIdx);
+    } else {
+      done = [...done, sessionIdx];
+    }
+    completions[key] = done;
+    save();
+    render();
+  }
+
+  function toggleExpand(id) {
+    const body = document.getElementById(`body-${id}`);
+    body.classList.toggle('open');
+  }
+
+  function openForm(reset = true) {
+    if (reset) {
+      editingId = null;
+      document.getElementById('form-title').textContent = 'Add Exercise';
+      document.getElementById('f-name').value = '';
+      document.getElementById('f-notes').value = '';
+      document.getElementById('f-reps').value = 10;
+      document.getElementById('f-sets').value = 3;
+      document.getElementById('f-times').value = 1;
+      document.getElementById('f-side').value = '';
+    }
+    document.getElementById('form-card').style.display = 'block';
+    document.getElementById('f-name').focus();
+    document.getElementById('form-card').scrollIntoView({behavior:'smooth'});
+  }
+
+  function closeForm() {
+    document.getElementById('form-card').style.display = 'none';
+    editingId = null;
+  }
+
+  function saveExercise() {
+    const name = document.getElementById('f-name').value.trim();
+    if (!name) { alert('Please enter an exercise name.'); return; }
+
+    const data = {
+      id: editingId || `ex_${Date.now()}`,
+      name,
+      notes: document.getElementById('f-notes').value.trim(),
+      reps: parseInt(document.getElementById('f-reps').value) || 10,
+      sets: parseInt(document.getElementById('f-sets').value) || 3,
+      timesPerDay: parseInt(document.getElementById('f-times').value) || 1,
+      side: document.getElementById('f-side').value,
+    };
+
+    if (editingId) {
+      exercises = exercises.map(e => e.id === editingId ? data : e);
+    } else {
+      exercises.push(data);
+    }
+
+    save();
+    closeForm();
+    render();
+  }
+
+  function editExercise(id) {
+    const ex = exercises.find(e => e.id === id);
+    if (!ex) return;
+    editingId = id;
+    document.getElementById('form-title').textContent = 'Edit Exercise';
+    document.getElementById('f-name').value = ex.name;
+    document.getElementById('f-notes').value = ex.notes;
+    document.getElementById('f-reps').value = ex.reps;
+    document.getElementById('f-sets').value = ex.sets;
+    document.getElementById('f-times').value = ex.timesPerDay;
+    document.getElementById('f-side').value = ex.side || '';
+    openForm(false);
+  }
+
+  function deleteExercise(id) {
+    if (!confirm('Delete this exercise?')) return;
+    exercises = exercises.filter(e => e.id !== id);
+    save();
+    render();
+  }
+
+  // ── Reminders ──────────────────────────────────────────────────────────
+  function addReminder() {
+    const t = document.getElementById('reminder-time').value;
+    if (!t) return;
+    if (reminders.includes(t)) { alert('That reminder already exists.'); return; }
+    reminders.push(t);
+    reminders.sort();
+    save();
+    renderReminders();
+    scheduleReminders();
+  }
+
+  function deleteReminder(t) {
+    reminders = reminders.filter(r => r !== t);
+    save();
+    renderReminders();
+    scheduleReminders();
+  }
+
+  function scheduleReminders() {
+    reminderTimers.forEach(clearTimeout);
+    reminderTimers = [];
+
+    if (Notification.permission !== 'granted') return;
+
+    const now = new Date();
+    reminders.forEach(timeStr => {
+      const [h, m] = timeStr.split(':').map(Number);
+      const target = new Date(now);
+      target.setHours(h, m, 0, 0);
+      let ms = target - now;
+      if (ms < 0) ms += 86400000; // next day
+
+      const t = setTimeout(() => {
+        fireReminder();
+        // reschedule for next day
+        const next = setTimeout(fireReminder, 86400000);
+        reminderTimers.push(next);
+      }, ms);
+      reminderTimers.push(t);
+    });
+  }
+
+  function fireReminder() {
+    const total = exercises.length;
+    const done = exercises.filter(ex => {
+      const k = `${ex.id}_${TODAY}`;
+      return (completions[k]||[]).length >= ex.timesPerDay;
+    }).length;
+    new Notification('PT Homework Reminder 💪', {
+      body: `${total - done} exercise${total - done !== 1 ? 's' : ''} still to do today.`,
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><text y="28" font-size="28">💪</text></svg>'
+    });
+  }
+
+  // ── Notifications permission ───────────────────────────────────────────
+  function checkNotifPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default' && localStorage.getItem('notif_dismissed') !== '1') {
+      document.getElementById('notif-banner').style.display = 'block';
+    }
+  }
+
+  function requestNotifPermission() {
+    Notification.requestPermission().then(p => {
+      document.getElementById('notif-banner').style.display = 'none';
+      if (p === 'granted') scheduleReminders();
+    });
+  }
+
+  function dismissBanner() {
+    localStorage.setItem('notif_dismissed', '1');
+    document.getElementById('notif-banner').style.display = 'none';
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatTime(t) {
+    const [h, m] = t.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    return `${((h % 12) || 12)}:${String(m).padStart(2,'0')} ${ampm}`;
+  }
+</script>
+</body>
+</html>
