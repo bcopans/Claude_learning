@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expertise UI — Mockup</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F3F4F6; color: #111827; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    .page { max-width: 560px; margin: 0 auto; padding: 24px 16px 60px; }
+    h1 { font-size: 0.75rem; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .label { display: inline-block; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #fff; background: #16A34A; border-radius: 9999px; padding: 2px 8px; margin-bottom: 16px; }
+    .section { margin-bottom: 36px; }
+    .section-title { font-size: 0.88rem; font-weight: 700; color: #374151; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #E5E7EB; }
+
+    /* ── OPTION A: Grouped table ── */
+    .breed-table { background: #fff; border: 1px solid #E5E7EB; border-radius: 14px; overflow: hidden; }
+    .coat-group-hdr {
+      background: #F9FAFB;
+      padding: 8px 16px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #6B7280;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid #E5E7EB;
+    }
+    .breed-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      border-bottom: 1px solid #F3F4F6;
+    }
+    .breed-row:last-child { border-bottom: none; }
+    .breed-name { font-size: 0.85rem; font-weight: 600; color: #111827; min-width: 130px; flex-shrink: 0; }
+    .cut-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .cut-chip {
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: #EFF6FF;
+      color: #2563EB;
+      border: 1px solid #BFDBFE;
+      font-weight: 500;
+    }
+
+    /* ── OPTION B: Search-in-expertise ── */
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      border: 1.5px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 0 14px;
+      height: 44px;
+      margin-bottom: 12px;
+      transition: border-color 0.15s;
+    }
+    .search-box:focus-within { border-color: #16A34A; }
+    .search-box input {
+      border: none; outline: none; font-family: inherit; font-size: 0.9rem; flex: 1; background: transparent; color: #111827;
+    }
+    .search-box input::placeholder { color: #9CA3AF; }
+    .search-icon { color: #9CA3AF; font-size: 1rem; }
+
+    .breed-result {
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+    }
+    .breed-result-name { font-weight: 700; font-size: 0.92rem; margin-bottom: 6px; }
+    .breed-result-match { color: #16A34A; font-size: 0.75rem; margin-bottom: 8px; font-weight: 500; }
+
+    /* ── OPTION C: Coat-type cards ── */
+    .coat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .coat-card {
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 14px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .coat-card:hover { border-color: #16A34A; }
+    .coat-card.active { border-color: #16A34A; background: #F0FDF4; }
+    .coat-icon { font-size: 1.5rem; margin-bottom: 6px; display: block; }
+    .coat-type-name { font-weight: 700; font-size: 0.85rem; margin-bottom: 3px; }
+    .coat-breeds { font-size: 0.72rem; color: #6B7280; }
+
+    .coat-detail {
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    .coat-detail-hdr { background: #F0FDF4; padding: 10px 14px; font-size: 0.75rem; font-weight: 700; color: #16A34A; }
+    .coat-detail-row { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid #F3F4F6; }
+    .coat-detail-row:last-child { border-bottom: none; }
+    .coat-detail-breed { font-size: 0.82rem; font-weight: 600; min-width: 110px; flex-shrink: 0; }
+
+    .divider { text-align: center; padding: 8px 0 20px; font-size: 0.75rem; color: #9CA3AF; font-style: italic; }
+    .vs { display: inline-block; background: #E5E7EB; border-radius: 9999px; padding: 2px 10px; font-style: normal; font-weight: 600; font-size: 0.7rem; color: #6B7280; margin: 0 6px; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Expertise UI</h1>
+  <p style="color:#6B7280;font-size:0.85rem;margin-bottom:28px">Three layout options — same underlying data.</p>
+
+  <!-- ── Option A ── -->
+  <div class="section">
+    <span class="label">Option A</span>
+    <div class="section-title">Grouped by coat type</div>
+    <div class="breed-table">
+
+      <div class="coat-group-hdr">Doodles & Poodles</div>
+      <div class="breed-row">
+        <div class="breed-name">Goldendoodle</div>
+        <div class="cut-chips">
+          <span class="cut-chip">Teddy Bear</span>
+          <span class="cut-chip">Puppy Cut</span>
+          <span class="cut-chip">Doodle Trim</span>
+        </div>
+      </div>
+      <div class="breed-row">
+        <div class="breed-name">Labradoodle</div>
+        <div class="cut-chips">
+          <span class="cut-chip">Puppy Cut</span>
+          <span class="cut-chip">Teddy Bear</span>
+        </div>
+      </div>
+      <div class="breed-row">
+        <div class="breed-name">Poodle</div>
+        <div class="cut-chips">
+          <span class="cut-chip">Continental</span>
+          <span class="cut-chip">Lamb Cut</span>
+          <span class="cut-chip">Puppy Cut</span>
+        </div>
+      </div>
+
+      <div class="coat-group-hdr">Terriers</div>
+      <div class="breed-row">
+        <div class="breed-name">Mini Schnauzer</div>
+        <div class="cut-chips">
+          <span class="cut-chip">Breed Cut</span>
+          <span class="cut-chip">Puppy Cut</span>
+        </div>
+      </div>
+      <div class="breed-row">
+        <div class="breed-name">Airedale</div>
+        <div class="cut-chips">
+          <span class="cut-chip">Hand-strip</span>
+          <span class="cut-chip">Breed Cut</span>
+        </div>
+      </div>
+
+      <div class="coat-group-hdr">Retrievers & Spaniels</div>
+      <div class="breed-row">
+        <div class="breed-name">Golden Retriever</div>
+        <div class="cut-chips">
+          <span class="cut-chip">Deshed</span>
+          <span class="cut-chip">Trim</span>
+          <span class="cut-chip">Feathering</span>
+        </div>
+      </div>
+      <div class="breed-row">
+        <div class="breed-name">Cocker Spaniel</div>
+        <div class="cut-chips">
+          <span class="cut-chip">Breed Cut</span>
+          <span class="cut-chip">Puppy Cut</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Option B ── -->
+  <div class="section">
+    <span class="label">Option B</span>
+    <div class="section-title">Search your breed</div>
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Type your dog's breed…" id="breed-search" oninput="filterBreeds(this.value)">
+    </div>
+    <div id="breed-results">
+      <div class="breed-result">
+        <div class="breed-result-name">Goldendoodle</div>
+        <div class="breed-result-match">✓ Maya specializes in this breed</div>
+        <div class="cut-chips">
+          <span class="cut-chip">Teddy Bear</span>
+          <span class="cut-chip">Puppy Cut</span>
+          <span class="cut-chip">Doodle Trim</span>
+        </div>
+      </div>
+      <div class="breed-result">
+        <div class="breed-result-name">Labradoodle</div>
+        <div class="breed-result-match">✓ Maya specializes in this breed</div>
+        <div class="cut-chips">
+          <span class="cut-chip">Puppy Cut</span>
+          <span class="cut-chip">Teddy Bear</span>
+        </div>
+      </div>
+      <div class="breed-result">
+        <div class="breed-result-name">Poodle</div>
+        <div class="breed-result-match">✓ Maya specializes in this breed</div>
+        <div class="cut-chips">
+          <span class="cut-chip">Continental</span>
+          <span class="cut-chip">Lamb Cut</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Option C ── -->
+  <div class="section">
+    <span class="label">Option C</span>
+    <div class="section-title">Tap a coat type</div>
+    <div class="coat-grid">
+      <div class="coat-card active" onclick="selectCoat(this, 'doodle')">
+        <span class="coat-icon">🌀</span>
+        <div class="coat-type-name">Curly & Doodle</div>
+        <div class="coat-breeds">Goldendoodle, Labradoodle, Poodle…</div>
+      </div>
+      <div class="coat-card" onclick="selectCoat(this, 'terrier')">
+        <span class="coat-icon">✂️</span>
+        <div class="coat-type-name">Wiry & Terrier</div>
+        <div class="coat-breeds">Schnauzer, Airedale, Westie…</div>
+      </div>
+      <div class="coat-card" onclick="selectCoat(this, 'double')">
+        <span class="coat-icon">🐻</span>
+        <div class="coat-type-name">Double-coated</div>
+        <div class="coat-breeds">Husky, Corgi, Shepherd…</div>
+      </div>
+      <div class="coat-card" onclick="selectCoat(this, 'silky')">
+        <span class="coat-icon">✨</span>
+        <div class="coat-type-name">Silky & Long</div>
+        <div class="coat-breeds">Shih Tzu, Maltese, Spaniel…</div>
+      </div>
+    </div>
+
+    <div id="coat-detail" class="coat-detail">
+      <div class="coat-detail-hdr">Curly & Doodle breeds Maya offers</div>
+      <div class="coat-detail-row">
+        <div class="coat-detail-breed">Goldendoodle</div>
+        <div class="cut-chips"><span class="cut-chip">Teddy Bear</span><span class="cut-chip">Puppy Cut</span><span class="cut-chip">Doodle Trim</span></div>
+      </div>
+      <div class="coat-detail-row">
+        <div class="coat-detail-breed">Labradoodle</div>
+        <div class="cut-chips"><span class="cut-chip">Puppy Cut</span><span class="cut-chip">Teddy Bear</span></div>
+      </div>
+      <div class="coat-detail-row">
+        <div class="coat-detail-breed">Poodle</div>
+        <div class="cut-chips"><span class="cut-chip">Continental</span><span class="cut-chip">Lamb Cut</span><span class="cut-chip">Puppy Cut</span></div>
+      </div>
+      <div class="coat-detail-row">
+        <div class="coat-detail-breed">Cavapoo</div>
+        <div class="cut-chips"><span class="cut-chip">Teddy Bear</span><span class="cut-chip">Puppy Cut</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const ALL_BREEDS = [
+    { name: 'Goldendoodle', cuts: ['Teddy Bear', 'Puppy Cut', 'Doodle Trim'] },
+    { name: 'Labradoodle',  cuts: ['Puppy Cut', 'Teddy Bear'] },
+    { name: 'Poodle',       cuts: ['Continental', 'Lamb Cut', 'Puppy Cut'] },
+    { name: 'Mini Schnauzer', cuts: ['Breed Cut', 'Puppy Cut'] },
+    { name: 'Airedale',     cuts: ['Hand-strip', 'Breed Cut'] },
+    { name: 'Golden Retriever', cuts: ['Deshed', 'Trim', 'Feathering'] },
+    { name: 'Cocker Spaniel',   cuts: ['Breed Cut', 'Puppy Cut'] },
+    { name: 'Shih Tzu',    cuts: ['Puppy Cut', 'Teddy Bear', 'Top Knot'] },
+    { name: 'Siberian Husky', cuts: ['Deshed', 'Bath & Brush'] },
+  ];
+
+  function filterBreeds(q) {
+    const el = document.getElementById('breed-results');
+    if (!q.trim()) {
+      el.innerHTML = ALL_BREEDS.slice(0,3).map(renderResult).join('');
+      return;
+    }
+    const matches = ALL_BREEDS.filter(b => b.name.toLowerCase().includes(q.toLowerCase()));
+    el.innerHTML = matches.length
+      ? matches.map(renderResult).join('')
+      : '<p style="color:#6B7280;font-size:0.85rem;padding:12px 0">No exact match — <a href="#" style="color:#16A34A">ask Maya if she can work with your breed</a></p>';
+  }
+
+  function renderResult(b) {
+    return `<div class="breed-result">
+      <div class="breed-result-name">${b.name}</div>
+      <div class="breed-result-match">✓ Maya specializes in this breed</div>
+      <div class="cut-chips">${b.cuts.map(c => `<span class="cut-chip">${c}</span>`).join('')}</div>
+    </div>`;
+  }
+
+  const COAT_DATA = {
+    doodle:  { label: 'Curly & Doodle breeds Maya offers', breeds: [
+      { name: 'Goldendoodle', cuts: ['Teddy Bear','Puppy Cut','Doodle Trim'] },
+      { name: 'Labradoodle',  cuts: ['Puppy Cut','Teddy Bear'] },
+      { name: 'Poodle',       cuts: ['Continental','Lamb Cut','Puppy Cut'] },
+      { name: 'Cavapoo',      cuts: ['Teddy Bear','Puppy Cut'] },
+    ]},
+    terrier: { label: 'Wiry & Terrier breeds Maya offers', breeds: [
+      { name: 'Mini Schnauzer', cuts: ['Breed Cut','Puppy Cut'] },
+      { name: 'Airedale',       cuts: ['Hand-strip','Breed Cut'] },
+      { name: 'Westie',         cuts: ['Breed Cut','Puppy Cut'] },
+    ]},
+    double: { label: 'Double-coated breeds Maya offers', breeds: [
+      { name: 'Siberian Husky', cuts: ['Deshed','Bath & Brush'] },
+      { name: 'Corgi',          cuts: ['Deshed','Trim'] },
+      { name: 'Shepherd',       cuts: ['Deshed','Trim'] },
+    ]},
+    silky: { label: 'Silky & Long coat breeds Maya offers', breeds: [
+      { name: 'Shih Tzu',  cuts: ['Puppy Cut','Teddy Bear','Top Knot'] },
+      { name: 'Maltese',   cuts: ['Puppy Cut','Show Cut'] },
+      { name: 'Cocker Spaniel', cuts: ['Breed Cut','Puppy Cut'] },
+    ]},
+  };
+
+  function selectCoat(card, type) {
+    document.querySelectorAll('.coat-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    const d = COAT_DATA[type];
+    document.getElementById('coat-detail').innerHTML = `
+      <div class="coat-detail-hdr">${d.label}</div>
+      ${d.breeds.map(b => `
+        <div class="coat-detail-row">
+          <div class="coat-detail-breed">${b.name}</div>
+          <div class="cut-chips">${b.cuts.map(c => `<span class="cut-chip">${c}</span>`).join('')}</div>
+        </div>`).join('')}`;
+  }
+</script>
+</body>
+</html>

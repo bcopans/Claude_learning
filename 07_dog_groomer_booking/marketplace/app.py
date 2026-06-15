@@ -135,6 +135,11 @@ def profile():
     return render_template("profile.html")
 
 
+@app.route("/mockup/expertise")
+def mockup_expertise():
+    return render_template("mockup_expertise.html")
+
+
 conversations: dict = {}
 
 
