@@ -249,6 +249,43 @@ def api_book():
     return jsonify(result), status
 
 
+@app.route("/api/register", methods=["POST"])
+def api_register():
+    data = request.json or {}
+    name     = (data.get("name") or "").strip()
+    phone    = (data.get("phone") or "").strip()
+    dog_name = (data.get("dog_name") or "").strip()
+    breed    = (data.get("breed") or "").strip()
+
+    if not name or not phone:
+        return jsonify({"error": "Name and phone are required."}), 400
+
+    with get_conn() as conn:
+        existing = conn.execute("SELECT id FROM owners WHERE phone=?", (phone,)).fetchone()
+        if existing:
+            return jsonify({"error": "An account with that phone number already exists."}), 400
+
+        conn.execute("INSERT INTO owners (name, phone) VALUES (?,?)", (name, phone))
+        owner_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+        dogs = []
+        if dog_name and breed:
+            conn.execute(
+                "INSERT INTO dogs (owner_id, name, breed, temperament_tags) VALUES (?,?,?,?)",
+                (owner_id, dog_name, breed, "[]"),
+            )
+            dog_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            dogs = [{"id": dog_id, "name": dog_name, "breed": breed, "age_years": None, "temperament_tags": []}]
+
+        conn.commit()
+
+    return jsonify({
+        "success": True,
+        "owner":   {"id": owner_id, "name": name, "phone": phone},
+        "dogs":    dogs,
+    })
+
+
 # ─── Streaming chat ───────────────────────────────────────────────────────────
 
 @app.route("/api/chat/stream", methods=["POST"])

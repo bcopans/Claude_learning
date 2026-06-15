@@ -9,81 +9,106 @@
 <body>
 <div class="book-page">
 
-  <header class="search-header">
+  <!-- Nav -->
+  <header class="nav">
     <a href="/search" class="logo">🐾 KindPaw</a>
   </header>
 
-  <!-- Steps indicator -->
-  <div class="steps-bar">
-    <div class="step active" id="s1">1 · You</div>
-    <div class="step-divider"></div>
-    <div class="step" id="s2">2 · Dog</div>
-    <div class="step-divider"></div>
-    <div class="step" id="s3">3 · Service</div>
-    <div class="step-divider"></div>
-    <div class="step" id="s4">4 · Date & Time</div>
-    <div class="step-divider"></div>
-    <div class="step" id="s5">5 · Confirm</div>
+  <!-- Groomer strip (populated by JS) -->
+  <div class="book-groomer" id="groomer-header" style="display:none">
+    <div class="book-groomer-avatar" id="g-avatar"></div>
+    <div>
+      <div class="book-groomer-name" id="g-name"></div>
+      <div class="book-groomer-biz"  id="g-biz"></div>
+    </div>
   </div>
 
-  <div class="book-container">
+  <!-- Progress bar -->
+  <div class="progress-bar-wrap">
+    <div class="progress-label" id="progress-label">Step 1 of 5</div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:20%"></div></div>
+  </div>
 
-    <!-- Groomer mini-header -->
-    <div class="book-groomer" id="groomer-header" style="display:none">
-      <div class="book-groomer-avatar" id="g-avatar"></div>
-      <div>
-        <div class="book-groomer-name" id="g-name"></div>
-        <div class="book-groomer-biz" id="g-biz"></div>
-      </div>
-    </div>
+  <!-- Step body -->
+  <div class="book-body">
 
-    <!-- Step 1: Phone lookup -->
+    <!-- Step 1: Phone -->
     <div id="step-1" class="book-step">
-      <h2>What's your phone number?</h2>
-      <p class="step-sub">We'll pull up your account and dogs.</p>
-      <div class="book-input-row">
-        <input type="tel" id="phone-in" placeholder="(503) 555-0101" autocomplete="tel">
-        <button onclick="lookupOwner()">Continue →</button>
+      <h2 class="book-step-title">What's your phone number?</h2>
+      <p class="book-step-sub">We'll pull up your account instantly.</p>
+
+      <div id="phone-section">
+        <div class="field" style="margin-bottom:12px">
+          <input class="input" type="tel" id="phone-in" placeholder="(503) 555-0101" autocomplete="tel">
+        </div>
+        <button class="btn btn-primary btn-block" onclick="lookupOwner()">Continue</button>
+        <p class="err" id="phone-err"></p>
       </div>
-      <p id="phone-error" class="field-error" style="display:none"></p>
-      <p class="step-hint">New to KindPaw? <a href="/owner">Chat with Sage to create an account.</a></p>
+
+      <!-- New user inline signup (hidden until phone not found) -->
+      <div id="new-user-section" style="display:none">
+        <div class="divider-text">New to KindPaw? Quick setup ↓</div>
+        <div class="new-user-card">
+          <div>
+            <h3>Create your account</h3>
+            <p>Just your name and your dog — takes 20 seconds.</p>
+          </div>
+          <div class="field">
+            <label>Your name</label>
+            <input class="input" type="text" id="name-in" placeholder="Jamie" autocomplete="given-name">
+          </div>
+          <div class="field">
+            <label>Dog's name</label>
+            <input class="input" type="text" id="dog-name-in" placeholder="Max">
+          </div>
+          <div class="field">
+            <label>Breed</label>
+            <input class="input" type="text" id="dog-breed-in" placeholder="Goldendoodle">
+          </div>
+          <button class="btn btn-primary btn-block" onclick="createAccount()">Create account &amp; continue</button>
+          <p class="err" id="reg-err"></p>
+        </div>
+      </div>
     </div>
 
     <!-- Step 2: Select dog -->
     <div id="step-2" class="book-step" style="display:none">
-      <h2>Which dog is this for?</h2>
+      <h2 class="book-step-title">Which dog is this for?</h2>
+      <p class="book-step-sub">Tap to select.</p>
       <div id="dog-options" class="option-grid"></div>
     </div>
 
     <!-- Step 3: Select service -->
     <div id="step-3" class="book-step" style="display:none">
-      <h2>Choose a service</h2>
+      <h2 class="book-step-title">Choose a service</h2>
+      <p class="book-step-sub">All prices include the full groom.</p>
       <div id="service-options" class="option-grid"></div>
     </div>
 
     <!-- Step 4: Date & time -->
     <div id="step-4" class="book-step" style="display:none">
-      <h2>Pick a date and time</h2>
-      <div class="date-row">
-        <input type="date" id="date-in" onchange="loadSlots()">
+      <h2 class="book-step-title">Pick a date and time</h2>
+      <p class="book-step-sub">Only open slots shown.</p>
+      <div class="date-field">
+        <input class="input" type="date" id="date-in" onchange="loadSlots()" style="max-width:200px">
       </div>
       <div id="slots-container" style="display:none">
-        <p class="step-sub">Available slots</p>
+        <p class="book-step-sub">Available times</p>
         <div id="slot-options" class="slot-grid"></div>
       </div>
-      <p id="slot-msg" class="step-sub" style="display:none"></p>
+      <p id="slot-msg" class="book-step-sub" style="display:none"></p>
     </div>
 
     <!-- Step 5: Confirm -->
     <div id="step-5" class="book-step" style="display:none">
-      <h2>Confirm your booking</h2>
+      <h2 class="book-step-title">Confirm your booking</h2>
+      <p class="book-step-sub">A 30% deposit is held to secure your spot.</p>
       <div class="confirm-card" id="confirm-card"></div>
-      <div class="special-req-row">
-        <label for="special-req">Special requests (optional)</label>
-        <textarea id="special-req" rows="2" placeholder="e.g. Go slow with the dryer, Max gets nervous"></textarea>
+      <div class="special-req-section">
+        <label>Special requests (optional)</label>
+        <textarea class="input" id="special-req" rows="2" placeholder="e.g. Go slow with the dryer, Max gets nervous"></textarea>
       </div>
-      <button class="btn-primary book-submit-btn" onclick="submitBooking()">Confirm & pay deposit</button>
-      <p id="book-error" class="field-error" style="display:none"></p>
+      <p class="err" id="book-err"></p>
     </div>
 
     <!-- Success -->
@@ -93,39 +118,64 @@
         <h2>You're booked!</h2>
         <div class="success-card" id="success-card"></div>
         <div class="success-actions">
-          <a href="/profile" class="btn-secondary">View my profile</a>
-          <a href="/search" class="btn-primary">Find another groomer</a>
+          <a href="/profile" class="btn btn-outline">View my profile</a>
+          <a href="/search"  class="btn btn-primary">Find another groomer</a>
         </div>
       </div>
     </div>
 
+  </div><!-- /book-body -->
+
+  <!-- Fixed bottom CTA (hidden on success) -->
+  <div class="book-cta" id="book-cta" style="display:none">
+    <button class="btn btn-primary btn-block" id="cta-btn" onclick="ctaAction()">Continue</button>
   </div>
+
 </div>
 
 <script>
   const GROOMER_ID = {{ groomer_id }};
   let groomer = null, owner = null, selectedDog = null, selectedService = null, selectedDate = null, selectedTime = null;
+  let currentStep = 1;
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
+  const STEPS = ['You', 'Dog', 'Service', 'Date & Time', 'Confirm'];
+
+  // ── Progress ─────────────────────────────────────────────────────────────
 
   function goStep(n) {
     document.querySelectorAll('.book-step').forEach(s => s.style.display = 'none');
-    document.getElementById(`step-${n === 'success' ? 'success' : n}`).style.display = 'block';
-    document.querySelectorAll('.step').forEach((s, i) => {
-      s.classList.toggle('active', i + 1 === n);
-      s.classList.toggle('done', i + 1 < n);
-    });
+    const id = n === 'success' ? 'step-success' : `step-${n}`;
+    document.getElementById(id).style.display = 'block';
+
+    if (n === 'success') {
+      document.getElementById('progress-bar-wrap') && (document.querySelector('.progress-bar-wrap').style.display = 'none');
+      document.getElementById('book-cta').style.display = 'none';
+      document.getElementById('groomer-header').style.display = 'none';
+      return;
+    }
+
+    currentStep = n;
+    const pct = (n / STEPS.length) * 100;
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-label').textContent = `Step ${n} of ${STEPS.length} — ${STEPS[n - 1]}`;
+
+    // Show/hide fixed CTA
+    const showCta = (n === 5);
+    document.getElementById('book-cta').style.display = showCta ? 'block' : 'none';
+
     window.scrollTo(0, 0);
   }
 
   function setMinDate() {
-    const today = new Date();
-    const d = today.toISOString().split('T')[0];
-    document.getElementById('date-in').min = d;
-    document.getElementById('date-in').value = '';
+    const d = new Date().toISOString().split('T')[0];
+    const el = document.getElementById('date-in');
+    el.min = d;
+    el.value = '';
+    document.getElementById('slots-container').style.display = 'none';
+    document.getElementById('slot-msg').style.display = 'none';
   }
 
-  // ── Load groomer ─────────────────────────────────────────────────────────
+  // ── Load groomer ──────────────────────────────────────────────────────────
 
   async function loadGroomer() {
     const res = await fetch(`/api/groomer/${GROOMER_ID}`);
@@ -137,21 +187,24 @@
     document.getElementById('groomer-header').style.display = 'flex';
   }
 
-  // ── Step 1: Phone lookup ─────────────────────────────────────────────────
+  // ── Step 1: Phone lookup ──────────────────────────────────────────────────
 
   async function lookupOwner() {
     const phone = document.getElementById('phone-in').value.trim();
-    const errEl = document.getElementById('phone-error');
+    const errEl = document.getElementById('phone-err');
     errEl.style.display = 'none';
     if (!phone) { errEl.textContent = 'Please enter your phone number.'; errEl.style.display = 'block'; return; }
 
     const res  = await fetch(`/api/profile?phone=${encodeURIComponent(phone)}`);
     const data = await res.json();
+
     if (!data.found) {
-      errEl.textContent = 'No account found. Chat with Sage to create one.';
-      errEl.style.display = 'block';
+      // Reveal inline registration instead of dead-end error
+      document.getElementById('phone-section').style.display = 'none';
+      document.getElementById('new-user-section').style.display = 'block';
       return;
     }
+
     owner = data.owner;
     renderDogs(data.dogs);
     goStep(2);
@@ -161,14 +214,56 @@
     if (e.key === 'Enter') lookupOwner();
   });
 
-  // ── Step 2: Select dog ───────────────────────────────────────────────────
+  // ── Step 1b: Inline registration ─────────────────────────────────────────
+
+  async function createAccount() {
+    const phone   = document.getElementById('phone-in').value.trim();
+    const name    = document.getElementById('name-in').value.trim();
+    const dogName = document.getElementById('dog-name-in').value.trim();
+    const breed   = document.getElementById('dog-breed-in').value.trim();
+    const errEl   = document.getElementById('reg-err');
+    errEl.style.display = 'none';
+
+    if (!name)    { errEl.textContent = 'Please enter your name.'; errEl.style.display = 'block'; return; }
+    if (!dogName) { errEl.textContent = "Please enter your dog's name."; errEl.style.display = 'block'; return; }
+    if (!breed)   { errEl.textContent = 'Please enter your dog\'s breed.'; errEl.style.display = 'block'; return; }
+
+    const btn = document.querySelector('#new-user-section .btn');
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+
+    const res  = await fetch('/api/register', {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify({ name, phone, dog_name: dogName, breed }),
+    });
+    const data = await res.json();
+
+    btn.disabled = false;
+    btn.textContent = 'Create account & continue';
+
+    if (!data.success) {
+      errEl.textContent = data.error || 'Something went wrong — please try again.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    owner = data.owner;
+    renderDogs(data.dogs);
+    goStep(2);
+  }
+
+  // ── Step 2: Select dog ────────────────────────────────────────────────────
 
   function renderDogs(dogs) {
     document.getElementById('dog-options').innerHTML = dogs.map(d => `
       <div class="option-card" onclick="selectDog(${d.id}, '${d.name}', '${d.breed}', this)">
         <div class="option-avatar">${d.name.charAt(0)}</div>
-        <div class="option-label">${d.name}</div>
-        <div class="option-sub">${d.breed}${d.age_years ? ` · ${d.age_years}yr` : ''}</div>
+        <div class="option-info">
+          <div class="option-label">${d.name}</div>
+          <div class="option-sub">${d.breed}${d.age_years ? ` · ${d.age_years}yr` : ''}</div>
+        </div>
+        <span class="option-check">✓</span>
       </div>
     `).join('');
   }
@@ -177,20 +272,20 @@
     document.querySelectorAll('#dog-options .option-card').forEach(c => c.classList.remove('selected'));
     el.classList.add('selected');
     selectedDog = {id, name, breed};
-    setTimeout(() => {
-      renderServices();
-      goStep(3);
-    }, 180);
+    setTimeout(() => { renderServices(); goStep(3); }, 200);
   }
 
-  // ── Step 3: Select service ───────────────────────────────────────────────
+  // ── Step 3: Select service ────────────────────────────────────────────────
 
   function renderServices() {
     document.getElementById('service-options').innerHTML = groomer.services.map(s => `
-      <div class="option-card option-card--wide" onclick="selectService(${s.id}, '${s.name}', ${s.price}, ${s.duration_mins}, this)">
-        <div class="option-label">${s.name}</div>
-        <div class="option-sub">${s.description || ''}</div>
-        <div class="option-meta">$${s.price} · ${s.duration_mins} min</div>
+      <div class="option-card" onclick="selectService(${s.id}, '${s.name}', ${s.price}, ${s.duration_mins}, this)" style="align-items:flex-start">
+        <div class="option-info">
+          <div class="option-label">${s.name}</div>
+          <div class="option-sub">${s.description || ''}</div>
+          <div class="option-meta">$${s.price} · ${s.duration_mins} min</div>
+        </div>
+        <span class="option-check">✓</span>
       </div>
     `).join('');
   }
@@ -199,10 +294,10 @@
     document.querySelectorAll('#service-options .option-card').forEach(c => c.classList.remove('selected'));
     el.classList.add('selected');
     selectedService = {id, name, price, duration};
-    setTimeout(() => { setMinDate(); goStep(4); }, 180);
+    setTimeout(() => { setMinDate(); goStep(4); }, 200);
   }
 
-  // ── Step 4: Date & time ──────────────────────────────────────────────────
+  // ── Step 4: Date & time ───────────────────────────────────────────────────
 
   async function loadSlots() {
     selectedDate = document.getElementById('date-in').value;
@@ -227,8 +322,8 @@
     slotsEl.innerHTML = data.slots.map(t => {
       const [h, m] = t.split(':');
       const hour   = parseInt(h);
-      const label  = `${hour > 12 ? hour - 12 : hour}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
-      return `<button class="slot-btn" data-time="${t}" onclick="selectSlot('${t}', '${label}', this)">${label}</button>`;
+      const label  = `${hour > 12 ? hour - 12 : hour === 0 ? 12 : hour}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
+      return `<button class="slot-btn" onclick="selectSlot('${t}', '${label}', this)">${label}</button>`;
     }).join('');
     document.getElementById('slots-container').style.display = 'block';
   }
@@ -237,35 +332,37 @@
     document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
     el.classList.add('selected');
     selectedTime = time;
-    setTimeout(() => { buildConfirm(); goStep(5); }, 180);
+    setTimeout(() => { buildConfirm(); goStep(5); }, 200);
   }
 
-  // ── Step 5: Confirm ──────────────────────────────────────────────────────
+  // ── Step 5: Confirm ───────────────────────────────────────────────────────
 
   function buildConfirm() {
     const dep = (selectedService.price * 0.30).toFixed(2);
     const rem = (selectedService.price * 0.70).toFixed(2);
     const [h, m] = selectedTime.split(':');
-    const hour   = parseInt(h);
-    const timeLabel = `${hour > 12 ? hour - 12 : hour}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
+    const hour = parseInt(h);
+    const timeLabel = `${hour > 12 ? hour - 12 : hour === 0 ? 12 : hour}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
 
     document.getElementById('confirm-card').innerHTML = `
-      <div class="confirm-row"><span>Dog</span><strong>${selectedDog.name} (${selectedDog.breed})</strong></div>
-      <div class="confirm-row"><span>Groomer</span><strong>${groomer.name} · ${groomer.business_name}</strong></div>
+      <div class="confirm-row"><span>Dog</span><strong>${selectedDog.name} · ${selectedDog.breed}</strong></div>
+      <div class="confirm-row"><span>Groomer</span><strong>${groomer.name}</strong></div>
       <div class="confirm-row"><span>Service</span><strong>${selectedService.name}</strong></div>
-      <div class="confirm-row"><span>Date & time</span><strong>${selectedDate} at ${timeLabel}</strong></div>
+      <div class="confirm-row"><span>Date &amp; time</span><strong>${selectedDate} at ${timeLabel}</strong></div>
       <div class="confirm-row"><span>Duration</span><strong>${selectedService.duration} min</strong></div>
-      <div class="confirm-divider"></div>
-      <div class="confirm-row"><span>Deposit due now (30%)</span><strong>$${dep}</strong></div>
-      <div class="confirm-row confirm-row--muted"><span>Remaining at appointment</span><span>$${rem}</span></div>
+      <div class="confirm-row"><span>Deposit now (30%)</span><strong>$${dep}</strong></div>
+      <div class="confirm-row confirm-row--muted"><span>Due at appointment</span><span>$${rem}</span></div>
       <div class="confirm-row confirm-total"><span>Total</span><strong>$${selectedService.price.toFixed(2)}</strong></div>
     `;
   }
 
+  // Fixed CTA on step 5 submits the booking
+  function ctaAction() { submitBooking(); }
+
   async function submitBooking() {
-    const errEl = document.getElementById('book-error');
+    const errEl = document.getElementById('book-err');
     errEl.style.display = 'none';
-    const btn = document.querySelector('.book-submit-btn');
+    const btn = document.getElementById('cta-btn');
     btn.disabled = true;
     btn.textContent = 'Booking…';
 
@@ -294,21 +391,20 @@
     }
 
     const dep = (selectedService.price * 0.30).toFixed(2);
-    const [h] = selectedTime.split(':');
+    const [h, m] = selectedTime.split(':');
     const hour = parseInt(h);
-    const timeLabel = `${hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`;
+    const timeLabel = `${hour > 12 ? hour - 12 : hour === 0 ? 12 : hour}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
 
     document.getElementById('success-card').innerHTML = `
       <div class="confirm-row"><span>Booking ref</span><strong class="booking-ref-lg">${data.booking_id}</strong></div>
       <div class="confirm-row"><span>Dog</span><strong>${selectedDog.name}</strong></div>
       <div class="confirm-row"><span>Groomer</span><strong>${groomer.name}</strong></div>
-      <div class="confirm-row"><span>Date & time</span><strong>${selectedDate} at ${timeLabel}</strong></div>
-      <div class="confirm-row"><span>Deposit charged</span><strong>$${dep}</strong></div>
+      <div class="confirm-row"><span>Date &amp; time</span><strong>${selectedDate} at ${timeLabel}</strong></div>
+      <div class="confirm-row"><span>Deposit</span><strong>$${dep}</strong></div>
     `;
     goStep('success');
   }
 
-  // ── Init ─────────────────────────────────────────────────────────────────
   loadGroomer();
 </script>
 </body>
