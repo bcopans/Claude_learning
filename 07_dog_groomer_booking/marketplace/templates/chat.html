@@ -14,6 +14,8 @@
     <div class="chat-title">{{ title }}</div>
     {% if role == 'owner' %}
     <a href="/profile" class="header-link">My profile →</a>
+    {% else %}
+    <a href="/groomer/{{ groomer_id }}/earnings" class="header-link">Earnings →</a>
     {% endif %}
   </header>
 

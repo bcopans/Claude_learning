@@ -1070,9 +1070,155 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
 }
 
 /* ─────────────────────────────────────────────
+   EARNINGS PAGE
+───────────────────────────────────────────── */
+.earnings-page { min-height: 100vh; background: var(--bg); }
+
+.earnings-hero {
+  background: var(--green);
+  color: #fff;
+  padding: 20px 20px 22px;
+}
+.earnings-hero-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; margin-bottom: 4px; }
+.earnings-hero-name  { font-size: 1.25rem; font-weight: 800; }
+
+.earnings-body { max-width: 640px; margin: 0 auto; padding: 20px 16px 0; }
+
+/* Summary cards */
+.esummary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.ecard {
+  background: var(--surface);
+  border-radius: var(--r);
+  padding: 14px 12px;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.ecard--highlight { border-color: var(--green); background: var(--green-light); }
+.ecard-label  { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.ecard-amount { font-size: 1.15rem; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; }
+.ecard--highlight .ecard-amount { color: var(--green); }
+.ecard-count  { font-size: 0.72rem; color: var(--muted); }
+
+/* Section */
+.esection { margin-bottom: 24px; }
+.esection h2 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
+}
+
+/* Weekly bar chart */
+.echart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  background: var(--surface);
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  padding: 16px 12px 10px;
+  height: 160px;
+}
+.ebar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+.ebar-val {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  max-width: 100%;
+  display: none; /* shown on wider screens */
+}
+.ebar-track {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+.ebar-fill {
+  width: 100%;
+  background: var(--green);
+  border-radius: 4px 4px 0 0;
+  min-height: 2px;
+  transition: height 0.4s ease;
+}
+.ebar-label {
+  font-size: 0.6rem;
+  color: var(--muted);
+  margin-top: 5px;
+  white-space: nowrap;
+}
+.ebar-count {
+  font-size: 0.55rem;
+  color: var(--subtle);
+  white-space: nowrap;
+}
+
+/* Service breakdown */
+.eservice-list {
+  background: var(--surface);
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.eservice-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+.eservice-row:last-child { border-bottom: none; }
+.eservice-name  { flex: 1; font-weight: 600; }
+.eservice-count { color: var(--muted); font-size: 0.8rem; white-space: nowrap; }
+.eservice-total { font-weight: 700; color: var(--green); white-space: nowrap; }
+
+/* Recent grooms */
+.erecent-list {
+  background: var(--surface);
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.erecent-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.erecent-row:last-child { border-bottom: none; }
+.erecent-left  { flex: 1; min-width: 0; }
+.erecent-dog   { font-weight: 600; font-size: 0.88rem; }
+.erecent-breed { color: var(--muted); font-weight: 400; }
+.erecent-meta  { color: var(--muted); font-size: 0.78rem; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.erecent-date  { color: var(--subtle); font-size: 0.73rem; margin-top: 1px; }
+.erecent-price { font-weight: 700; color: var(--green); font-size: 0.92rem; white-space: nowrap; }
+
+/* ─────────────────────────────────────────────
    TABLET +
 ───────────────────────────────────────────── */
 @media (min-width: 640px) {
+  .esummary         { gap: 14px; }
+  .ecard            { padding: 18px 16px; }
+  .ecard-amount     { font-size: 1.35rem; }
+  .ebar-val         { display: block; }
   .filter-bar       { flex-direction: row; flex-wrap: wrap; padding: 16px 24px; }
   .groomer-grid     { grid-template-columns: repeat(2, 1fr); padding: 0 24px 40px; }
   .portfolio-grid   { grid-template-columns: repeat(3, 1fr); }

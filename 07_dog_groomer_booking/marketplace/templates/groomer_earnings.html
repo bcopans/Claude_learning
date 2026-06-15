@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KindPaw — Earnings</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="earnings-page">
+
+  <header class="nav">
+    <a href="/groomer/{{ groomer_id }}" class="logo">🐾 KindPaw</a>
+    <div class="nav-spacer"></div>
+    <a href="/groomer/{{ groomer_id }}/profile" class="nav-link">Profile →</a>
+  </header>
+
+  <div class="earnings-hero">
+    <div class="earnings-hero-label">Earnings</div>
+    <div class="earnings-hero-name">{{ groomer_name }}</div>
+  </div>
+
+  <div class="earnings-body" id="earnings-body">
+    <div class="loading-card">Loading…</div>
+  </div>
+
+</div>
+
+<script>
+  const GROOMER_ID = {{ groomer_id }};
+
+  function fmt(n) { return '$' + Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+
+  async function load() {
+    const res  = await fetch(`/api/groomer/${GROOMER_ID}/earnings`);
+    const data = await res.json();
+
+    const maxWeekly = Math.max(...data.weekly.map(w => w.total), 1);
+
+    const weeklyBars = data.weekly.map(w => `
+      <div class="ebar-col">
+        <div class="ebar-val">${w.total > 0 ? fmt(w.total) : ''}</div>
+        <div class="ebar-track">
+          <div class="ebar-fill" style="height:${Math.round((w.total / maxWeekly) * 100)}%"></div>
+        </div>
+        <div class="ebar-label">${w.label}</div>
+        <div class="ebar-count">${w.count > 0 ? w.count + ' groom' + (w.count !== 1 ? 's' : '') : ''}</div>
+      </div>
+    `).join('');
+
+    const serviceRows = data.by_service.map(s => `
+      <div class="eservice-row">
+        <div class="eservice-name">${s.name}</div>
+        <div class="eservice-count">${s.count} groom${s.count !== 1 ? 's' : ''}</div>
+        <div class="eservice-total">${fmt(s.total)}</div>
+      </div>
+    `).join('') || '<p class="empty" style="padding:16px">No completed grooms yet.</p>';
+
+    const recentRows = data.recent.map(b => `
+      <div class="erecent-row">
+        <div class="erecent-left">
+          <div class="erecent-dog">${b.dog_name} <span class="erecent-breed">${b.breed}</span></div>
+          <div class="erecent-meta">${b.service_name}${b.cut_style ? ' · ' + b.cut_style : ''} · ${b.owner_name}</div>
+          <div class="erecent-date">${b.date} at ${b.time}</div>
+        </div>
+        <div class="erecent-price">${fmt(b.total_price)}</div>
+      </div>
+    `).join('') || '<p class="empty" style="padding:16px">No completed grooms yet.</p>';
+
+    document.getElementById('earnings-body').innerHTML = `
+      <!-- Summary cards -->
+      <div class="esummary">
+        <div class="ecard">
+          <div class="ecard-label">This week</div>
+          <div class="ecard-amount">${fmt(data.this_week.total)}</div>
+          <div class="ecard-count">${data.this_week.count} groom${data.this_week.count !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="ecard">
+          <div class="ecard-label">This month</div>
+          <div class="ecard-amount">${fmt(data.this_month.total)}</div>
+          <div class="ecard-count">${data.this_month.count} groom${data.this_month.count !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="ecard ecard--highlight">
+          <div class="ecard-label">All time</div>
+          <div class="ecard-amount">${fmt(data.all_time.total)}</div>
+          <div class="ecard-count">${data.all_time.count} groom${data.all_time.count !== 1 ? 's' : ''}</div>
+        </div>
+      </div>
+
+      <!-- Weekly chart -->
+      <div class="esection">
+        <h2>Last 8 weeks</h2>
+        <div class="echart">
+          ${weeklyBars}
+        </div>
+      </div>
+
+      <!-- By service -->
+      <div class="esection">
+        <h2>By service</h2>
+        <div class="eservice-list">
+          ${serviceRows}
+        </div>
+      </div>
+
+      <!-- Recent grooms -->
+      <div class="esection" style="padding-bottom:48px">
+        <h2>Recent grooms</h2>
+        <div class="erecent-list">
+          ${recentRows}
+        </div>
+      </div>
+    `;
+  }
+
+  load();
+</script>
+</body>
+</html>

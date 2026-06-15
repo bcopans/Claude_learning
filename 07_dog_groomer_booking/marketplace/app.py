@@ -79,6 +79,15 @@ def groomer_profile_page(groomer_id):
     return render_template("groomer_profile.html", groomer_id=groomer_id)
 
 
+@app.route("/groomer/<int:groomer_id>/earnings")
+def groomer_earnings_page(groomer_id):
+    with get_conn() as conn:
+        g = conn.execute("SELECT * FROM groomers WHERE id=?", (groomer_id,)).fetchone()
+    if not g:
+        return "Groomer not found", 404
+    return render_template("groomer_earnings.html", groomer_id=groomer_id, groomer_name=g["name"])
+
+
 @app.route("/book/<int:groomer_id>")
 def book_page(groomer_id):
     return render_template("book.html", groomer_id=groomer_id)
@@ -116,6 +125,7 @@ def groomer_chat(groomer_id):
         "chat.html",
         title=f"{g['name']} — Groomer Dashboard",
         role="groomer",
+        groomer_id=groomer_id,
         initial_message="Show me what's on my schedule today and tomorrow.",
     )
 
@@ -373,6 +383,65 @@ def api_portfolio_photo():
               data.get("caption", ""), data.get("cut_style", "")))
         conn.commit()
     return jsonify({"success": True})
+
+
+# ─── Earnings API ────────────────────────────────────────────────────────────
+
+@app.route("/api/groomer/<int:groomer_id>/earnings")
+def api_groomer_earnings(groomer_id):
+    from datetime import date, timedelta
+    today = date.today()
+    week_ago  = (today - timedelta(days=7)).isoformat()
+    month_ago = (today - timedelta(days=30)).isoformat()
+
+    with get_conn() as conn:
+        bookings = conn.execute("""
+            SELECT b.id, b.date, b.time, b.total_price, b.cut_style,
+                   d.name AS dog_name, d.breed,
+                   o.name AS owner_name,
+                   s.name AS service_name
+            FROM bookings b
+            JOIN dogs d ON b.dog_id = d.id
+            JOIN owners o ON b.owner_id = o.id
+            JOIN services s ON b.service_id = s.id
+            WHERE b.groomer_id=? AND b.status='completed'
+            ORDER BY b.date DESC, b.time DESC
+        """, (groomer_id,)).fetchall()
+
+        service_rows = conn.execute("""
+            SELECT s.name, COUNT(*) as count, SUM(b.total_price) as total
+            FROM bookings b
+            JOIN services s ON b.service_id = s.id
+            WHERE b.groomer_id=? AND b.status='completed'
+            GROUP BY s.name
+            ORDER BY total DESC
+        """, (groomer_id,)).fetchall()
+
+    all_bookings = [dict(b) for b in bookings]
+
+    def _sum(rows):
+        return round(sum(r["total_price"] or 0 for r in rows), 2)
+
+    week_b  = [b for b in all_bookings if b["date"] >= week_ago]
+    month_b = [b for b in all_bookings if b["date"] >= month_ago]
+
+    # Weekly buckets for last 8 weeks
+    weekly = []
+    for w in range(7, -1, -1):
+        start = (today - timedelta(days=(w + 1) * 7)).isoformat()
+        end   = (today - timedelta(days=w * 7)).isoformat()
+        label = (today - timedelta(days=w * 7)).strftime("%-m/%-d") if w > 0 else "This wk"
+        bucket = [b for b in all_bookings if start <= b["date"] < end]
+        weekly.append({"label": label, "total": _sum(bucket), "count": len(bucket)})
+
+    return jsonify({
+        "this_week":  {"total": _sum(week_b),  "count": len(week_b)},
+        "this_month": {"total": _sum(month_b), "count": len(month_b)},
+        "all_time":   {"total": _sum(all_bookings), "count": len(all_bookings)},
+        "weekly":     weekly,
+        "by_service": [dict(r) for r in service_rows],
+        "recent":     all_bookings[:20],
+    })
 
 
 # ─── Streaming chat ───────────────────────────────────────────────────────────
