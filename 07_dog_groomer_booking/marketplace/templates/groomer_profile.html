@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KindPaw — Groomer Profile</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="gprofile-page">
+
+  <header class="search-header">
+    <a href="/search" class="logo">🐾 KindPaw</a>
+    <div id="book-cta" style="display:none">
+      <a id="book-btn" href="#" class="btn-primary">Book now</a>
+    </div>
+  </header>
+
+  <div id="content">
+    <div class="loading-card">Loading…</div>
+  </div>
+
+</div>
+
+<script>
+  const GROOMER_ID = {{ groomer_id }};
+
+  function stars(rating) {
+    return '★'.repeat(Math.floor(rating)) + (rating % 1 >= 0.5 ? '½' : '') + '☆'.repeat(5 - Math.ceil(rating));
+  }
+
+  async function load() {
+    const res  = await fetch(`/api/groomer/${GROOMER_ID}`);
+    const g    = await res.json();
+
+    document.title = `KindPaw — ${g.name}`;
+    document.getElementById('book-btn').href = `/book/${g.id}`;
+    document.getElementById('book-cta').style.display = 'block';
+
+    const certs = g.certification_tags.map(c => `<span class="cert-badge">${c}</span>`).join('');
+    const specs = g.specialization_tags.map(s => `<span class="tag">${s}</span>`).join('');
+    const breeds = g.breed_expertise.map(b => `<span class="tag tag--green">${b}</span>`).join('');
+    const cuts  = g.cut_specialties.map(c => `<span class="tag tag--blue">${c}</span>`).join('');
+
+    const services = g.services.map(s => `
+      <div class="service-row">
+        <div>
+          <div class="service-name">${s.name}</div>
+          ${s.description ? `<div class="service-desc">${s.description}</div>` : ''}
+        </div>
+        <div class="service-right">
+          <div class="service-price">$${s.price}</div>
+          <div class="service-dur">${s.duration_mins} min</div>
+        </div>
+      </div>
+    `).join('');
+
+    const portfolio = g.portfolio.length ? g.portfolio.map(p => `
+      <div class="portfolio-item">
+        <div class="portfolio-img-placeholder">
+          <div class="portfolio-label">${p.cut_style || 'groom'}</div>
+          <div class="portfolio-breed">${p.breed}</div>
+        </div>
+        ${p.rating ? `<div class="portfolio-review">
+          <span class="stars-sm">${'★'.repeat(p.rating)}</span>
+          <span class="portfolio-review-text">"${p.review_text ? p.review_text.slice(0, 80) + '…' : ''}"</span>
+        </div>` : ''}
+        <div class="portfolio-dog">${p.dog_name} · ${p.caption || ''}</div>
+      </div>
+    `).join('') : '<p class="empty">Portfolio photos coming soon.</p>';
+
+    const reviews = g.reviews.length ? g.reviews.map(r => `
+      <div class="review-item">
+        <div class="review-top">
+          <span class="stars">${'★'.repeat(r.rating)}</span>
+          <span class="review-meta">${r.owner_name} · ${r.dog_name} (${r.breed})${r.cut_style ? ` · ${r.cut_style}` : ''}</span>
+        </div>
+        <p class="review-text">"${r.review_text}"</p>
+      </div>
+    `).join('') : '<p class="empty">No reviews yet.</p>';
+
+    document.getElementById('content').innerHTML = `
+      <div class="gprofile-hero">
+        <div class="gprofile-avatar">${g.name.charAt(0)}</div>
+        <div class="gprofile-info">
+          <h1>${g.name}</h1>
+          <div class="gprofile-biz">${g.business_name} · ${g.location}</div>
+          <div class="gprofile-rating">
+            <span class="stars">${stars(g.avg_rating)}</span>
+            <strong>${g.avg_rating}</strong>
+            <span class="rating-cnt">${g.total_reviews} grooms</span>
+          </div>
+          <div class="gprofile-certs">${certs}</div>
+        </div>
+      </div>
+
+      <div class="gprofile-bio">${g.bio}</div>
+
+      <div class="gprofile-section">
+        <h2>Specializations</h2>
+        <div class="tag-row">${specs}</div>
+      </div>
+
+      <div class="gprofile-section">
+        <h2>Breed expertise</h2>
+        <div class="tag-row">${breeds}</div>
+      </div>
+
+      <div class="gprofile-section">
+        <h2>Cut styles</h2>
+        <div class="tag-row">${cuts}</div>
+      </div>
+
+      <div class="gprofile-section">
+        <h2>Services & pricing</h2>
+        <div class="services-list">${services}</div>
+        <a href="/book/${g.id}" class="btn-primary" style="margin-top:16px;display:inline-block">Book with ${g.name} →</a>
+      </div>
+
+      <div class="gprofile-section">
+        <h2>Portfolio</h2>
+        <p class="section-sub">All photos are from verified grooms on KindPaw.</p>
+        <div class="portfolio-grid">${portfolio}</div>
+      </div>
+
+      <div class="gprofile-section">
+        <h2>Reviews</h2>
+        <div class="reviews-list">${reviews}</div>
+      </div>
+    `;
+  }
+
+  load();
+</script>
+</body>
+</html>

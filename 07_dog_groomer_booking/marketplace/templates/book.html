@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KindPaw — Book</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="book-page">
+
+  <header class="search-header">
+    <a href="/search" class="logo">🐾 KindPaw</a>
+  </header>
+
+  <!-- Steps indicator -->
+  <div class="steps-bar">
+    <div class="step active" id="s1">1 · You</div>
+    <div class="step-divider"></div>
+    <div class="step" id="s2">2 · Dog</div>
+    <div class="step-divider"></div>
+    <div class="step" id="s3">3 · Service</div>
+    <div class="step-divider"></div>
+    <div class="step" id="s4">4 · Date & Time</div>
+    <div class="step-divider"></div>
+    <div class="step" id="s5">5 · Confirm</div>
+  </div>
+
+  <div class="book-container">
+
+    <!-- Groomer mini-header -->
+    <div class="book-groomer" id="groomer-header" style="display:none">
+      <div class="book-groomer-avatar" id="g-avatar"></div>
+      <div>
+        <div class="book-groomer-name" id="g-name"></div>
+        <div class="book-groomer-biz" id="g-biz"></div>
+      </div>
+    </div>
+
+    <!-- Step 1: Phone lookup -->
+    <div id="step-1" class="book-step">
+      <h2>What's your phone number?</h2>
+      <p class="step-sub">We'll pull up your account and dogs.</p>
+      <div class="book-input-row">
+        <input type="tel" id="phone-in" placeholder="(503) 555-0101" autocomplete="tel">
+        <button onclick="lookupOwner()">Continue →</button>
+      </div>
+      <p id="phone-error" class="field-error" style="display:none"></p>
+      <p class="step-hint">New to KindPaw? <a href="/owner">Chat with Sage to create an account.</a></p>
+    </div>
+
+    <!-- Step 2: Select dog -->
+    <div id="step-2" class="book-step" style="display:none">
+      <h2>Which dog is this for?</h2>
+      <div id="dog-options" class="option-grid"></div>
+    </div>
+
+    <!-- Step 3: Select service -->
+    <div id="step-3" class="book-step" style="display:none">
+      <h2>Choose a service</h2>
+      <div id="service-options" class="option-grid"></div>
+    </div>
+
+    <!-- Step 4: Date & time -->
+    <div id="step-4" class="book-step" style="display:none">
+      <h2>Pick a date and time</h2>
+      <div class="date-row">
+        <input type="date" id="date-in" onchange="loadSlots()">
+      </div>
+      <div id="slots-container" style="display:none">
+        <p class="step-sub">Available slots</p>
+        <div id="slot-options" class="slot-grid"></div>
+      </div>
+      <p id="slot-msg" class="step-sub" style="display:none"></p>
+    </div>
+
+    <!-- Step 5: Confirm -->
+    <div id="step-5" class="book-step" style="display:none">
+      <h2>Confirm your booking</h2>
+      <div class="confirm-card" id="confirm-card"></div>
+      <div class="special-req-row">
+        <label for="special-req">Special requests (optional)</label>
+        <textarea id="special-req" rows="2" placeholder="e.g. Go slow with the dryer, Max gets nervous"></textarea>
+      </div>
+      <button class="btn-primary book-submit-btn" onclick="submitBooking()">Confirm & pay deposit</button>
+      <p id="book-error" class="field-error" style="display:none"></p>
+    </div>
+
+    <!-- Success -->
+    <div id="step-success" class="book-step" style="display:none">
+      <div class="success-screen">
+        <div class="success-icon">🐾</div>
+        <h2>You're booked!</h2>
+        <div class="success-card" id="success-card"></div>
+        <div class="success-actions">
+          <a href="/profile" class="btn-secondary">View my profile</a>
+          <a href="/search" class="btn-primary">Find another groomer</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const GROOMER_ID = {{ groomer_id }};
+  let groomer = null, owner = null, selectedDog = null, selectedService = null, selectedDate = null, selectedTime = null;
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  function goStep(n) {
+    document.querySelectorAll('.book-step').forEach(s => s.style.display = 'none');
+    document.getElementById(`step-${n === 'success' ? 'success' : n}`).style.display = 'block';
+    document.querySelectorAll('.step').forEach((s, i) => {
+      s.classList.toggle('active', i + 1 === n);
+      s.classList.toggle('done', i + 1 < n);
+    });
+    window.scrollTo(0, 0);
+  }
+
+  function setMinDate() {
+    const today = new Date();
+    const d = today.toISOString().split('T')[0];
+    document.getElementById('date-in').min = d;
+    document.getElementById('date-in').value = '';
+  }
+
+  // ── Load groomer ─────────────────────────────────────────────────────────
+
+  async function loadGroomer() {
+    const res = await fetch(`/api/groomer/${GROOMER_ID}`);
+    groomer = await res.json();
+    document.title = `KindPaw — Book with ${groomer.name}`;
+    document.getElementById('g-avatar').textContent = groomer.name.charAt(0);
+    document.getElementById('g-name').textContent   = groomer.name;
+    document.getElementById('g-biz').textContent    = groomer.business_name;
+    document.getElementById('groomer-header').style.display = 'flex';
+  }
+
+  // ── Step 1: Phone lookup ─────────────────────────────────────────────────
+
+  async function lookupOwner() {
+    const phone = document.getElementById('phone-in').value.trim();
+    const errEl = document.getElementById('phone-error');
+    errEl.style.display = 'none';
+    if (!phone) { errEl.textContent = 'Please enter your phone number.'; errEl.style.display = 'block'; return; }
+
+    const res  = await fetch(`/api/profile?phone=${encodeURIComponent(phone)}`);
+    const data = await res.json();
+    if (!data.found) {
+      errEl.textContent = 'No account found. Chat with Sage to create one.';
+      errEl.style.display = 'block';
+      return;
+    }
+    owner = data.owner;
+    renderDogs(data.dogs);
+    goStep(2);
+  }
+
+  document.getElementById('phone-in').addEventListener('keydown', e => {
+    if (e.key === 'Enter') lookupOwner();
+  });
+
+  // ── Step 2: Select dog ───────────────────────────────────────────────────
+
+  function renderDogs(dogs) {
+    document.getElementById('dog-options').innerHTML = dogs.map(d => `
+      <div class="option-card" onclick="selectDog(${d.id}, '${d.name}', '${d.breed}', this)">
+        <div class="option-avatar">${d.name.charAt(0)}</div>
+        <div class="option-label">${d.name}</div>
+        <div class="option-sub">${d.breed}${d.age_years ? ` · ${d.age_years}yr` : ''}</div>
+      </div>
+    `).join('');
+  }
+
+  function selectDog(id, name, breed, el) {
+    document.querySelectorAll('#dog-options .option-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedDog = {id, name, breed};
+    setTimeout(() => {
+      renderServices();
+      goStep(3);
+    }, 180);
+  }
+
+  // ── Step 3: Select service ───────────────────────────────────────────────
+
+  function renderServices() {
+    document.getElementById('service-options').innerHTML = groomer.services.map(s => `
+      <div class="option-card option-card--wide" onclick="selectService(${s.id}, '${s.name}', ${s.price}, ${s.duration_mins}, this)">
+        <div class="option-label">${s.name}</div>
+        <div class="option-sub">${s.description || ''}</div>
+        <div class="option-meta">$${s.price} · ${s.duration_mins} min</div>
+      </div>
+    `).join('');
+  }
+
+  function selectService(id, name, price, duration, el) {
+    document.querySelectorAll('#service-options .option-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedService = {id, name, price, duration};
+    setTimeout(() => { setMinDate(); goStep(4); }, 180);
+  }
+
+  // ── Step 4: Date & time ──────────────────────────────────────────────────
+
+  async function loadSlots() {
+    selectedDate = document.getElementById('date-in').value;
+    if (!selectedDate) return;
+
+    selectedTime = null;
+    const slotsEl = document.getElementById('slot-options');
+    const msgEl   = document.getElementById('slot-msg');
+    slotsEl.innerHTML = '';
+    document.getElementById('slots-container').style.display = 'none';
+    msgEl.style.display = 'none';
+
+    const res  = await fetch(`/api/slots/${GROOMER_ID}/${selectedDate}`);
+    const data = await res.json();
+
+    if (!data.slots.length) {
+      msgEl.textContent = 'No availability that day — try another date.';
+      msgEl.style.display = 'block';
+      return;
+    }
+
+    slotsEl.innerHTML = data.slots.map(t => {
+      const [h, m] = t.split(':');
+      const hour   = parseInt(h);
+      const label  = `${hour > 12 ? hour - 12 : hour}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
+      return `<button class="slot-btn" data-time="${t}" onclick="selectSlot('${t}', '${label}', this)">${label}</button>`;
+    }).join('');
+    document.getElementById('slots-container').style.display = 'block';
+  }
+
+  function selectSlot(time, label, el) {
+    document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedTime = time;
+    setTimeout(() => { buildConfirm(); goStep(5); }, 180);
+  }
+
+  // ── Step 5: Confirm ──────────────────────────────────────────────────────
+
+  function buildConfirm() {
+    const dep = (selectedService.price * 0.30).toFixed(2);
+    const rem = (selectedService.price * 0.70).toFixed(2);
+    const [h, m] = selectedTime.split(':');
+    const hour   = parseInt(h);
+    const timeLabel = `${hour > 12 ? hour - 12 : hour}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
+
+    document.getElementById('confirm-card').innerHTML = `
+      <div class="confirm-row"><span>Dog</span><strong>${selectedDog.name} (${selectedDog.breed})</strong></div>
+      <div class="confirm-row"><span>Groomer</span><strong>${groomer.name} · ${groomer.business_name}</strong></div>
+      <div class="confirm-row"><span>Service</span><strong>${selectedService.name}</strong></div>
+      <div class="confirm-row"><span>Date & time</span><strong>${selectedDate} at ${timeLabel}</strong></div>
+      <div class="confirm-row"><span>Duration</span><strong>${selectedService.duration} min</strong></div>
+      <div class="confirm-divider"></div>
+      <div class="confirm-row"><span>Deposit due now (30%)</span><strong>$${dep}</strong></div>
+      <div class="confirm-row confirm-row--muted"><span>Remaining at appointment</span><span>$${rem}</span></div>
+      <div class="confirm-row confirm-total"><span>Total</span><strong>$${selectedService.price.toFixed(2)}</strong></div>
+    `;
+  }
+
+  async function submitBooking() {
+    const errEl = document.getElementById('book-error');
+    errEl.style.display = 'none';
+    const btn = document.querySelector('.book-submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Booking…';
+
+    const res = await fetch('/api/book', {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        owner_id:         owner.id,
+        dog_id:           selectedDog.id,
+        groomer_id:       GROOMER_ID,
+        service_id:       selectedService.id,
+        date:             selectedDate,
+        time:             selectedTime,
+        special_requests: document.getElementById('special-req').value.trim(),
+      }),
+    });
+
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = 'Confirm & pay deposit';
+
+    if (!data.success) {
+      errEl.textContent = data.error || 'Something went wrong — please try again.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    const dep = (selectedService.price * 0.30).toFixed(2);
+    const [h] = selectedTime.split(':');
+    const hour = parseInt(h);
+    const timeLabel = `${hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`;
+
+    document.getElementById('success-card').innerHTML = `
+      <div class="confirm-row"><span>Booking ref</span><strong class="booking-ref-lg">${data.booking_id}</strong></div>
+      <div class="confirm-row"><span>Dog</span><strong>${selectedDog.name}</strong></div>
+      <div class="confirm-row"><span>Groomer</span><strong>${groomer.name}</strong></div>
+      <div class="confirm-row"><span>Date & time</span><strong>${selectedDate} at ${timeLabel}</strong></div>
+      <div class="confirm-row"><span>Deposit charged</span><strong>$${dep}</strong></div>
+    `;
+    goStep('success');
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+  loadGroomer();
+</script>
+</body>
+</html>
