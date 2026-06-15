@@ -2,32 +2,39 @@
 KindPaw — Flask web app
 
 Routes:
-  GET  /              landing page (choose owner or groomer)
-  GET  /owner         pet owner chat
-  GET  /groomer/<id>  groomer dashboard chat
-  POST /api/chat      send a message, get a reply
-  GET  /api/groomers  list groomers (for landing page)
+  GET  /                  landing page
+  GET  /owner             pet owner chat
+  GET  /groomer/<id>      groomer dashboard chat
+  GET  /profile           owner profile page (lookup by phone)
+  POST /api/chat/stream   streaming chat endpoint (SSE)
+  GET  /api/groomers      list groomers
+  GET  /api/profile       owner profile data (JSON)
 """
 
+import json
 import os
 import sys
 import uuid
 
-from flask import Flask, jsonify, render_template, request, session
+from flask import Flask, Response, jsonify, render_template, request, session, stream_with_context
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 from db import bootstrap, get_conn
 import owner_bot
 import groomer_bot
+from stream_utils import stream_chat
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
 
-# In-memory conversation store: session_id → {messages, role, groomer_id?, ...}
-# (fine for a demo — resets on restart)
+# In-memory conversation store: session_id → {messages, role, ...}
 conversations: dict = {}
 
+
+# ---------------------------------------------------------------------------
+# Pages
+# ---------------------------------------------------------------------------
 
 @app.route("/")
 def index():
@@ -71,33 +78,62 @@ def groomer(groomer_id):
     )
 
 
-@app.route("/api/chat", methods=["POST"])
-def chat():
+@app.route("/profile")
+def profile():
+    return render_template("profile.html")
+
+
+# ---------------------------------------------------------------------------
+# Streaming chat
+# ---------------------------------------------------------------------------
+
+@app.route("/api/chat/stream", methods=["POST"])
+def chat_stream():
     sid = session.get("id")
     if not sid or sid not in conversations:
-        return jsonify({"error": "Session expired — please refresh the page."}), 400
+        def expired():
+            yield f"data: {json.dumps({'type': 'error', 'data': 'Session expired — please refresh.'})}\n\n"
+        return Response(expired(), mimetype="text/event-stream")
 
     conv = conversations[sid]
     message = (request.json or {}).get("message", "").strip()
     if not message:
-        return jsonify({"error": "Empty message."}), 400
+        def empty():
+            yield f"data: {json.dumps({'type': 'error', 'data': 'Empty message.'})}\n\n"
+        return Response(empty(), mimetype="text/event-stream")
 
     conv["messages"].append({"role": "user", "content": message})
 
-    try:
-        if conv["role"] == "owner":
-            reply, updated = owner_bot.chat(conv["messages"])
-        else:
-            system = groomer_bot.build_system(
-                conv["groomer_id"], conv["groomer_name"], conv["business_name"]
-            )
-            reply, updated = groomer_bot.chat(conv["messages"], system)
+    if conv["role"] == "owner":
+        system    = owner_bot.SYSTEM
+        tools     = owner_bot.TOOLS
+        run_tool  = owner_bot.run_tool
+    else:
+        system    = groomer_bot.build_system(conv["groomer_id"], conv["groomer_name"], conv["business_name"])
+        tools     = groomer_bot.TOOLS
+        run_tool  = groomer_bot.run_tool
 
-        conv["messages"] = updated
-        return jsonify({"reply": reply})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    messages = conv["messages"]
 
+    @stream_with_context
+    def generate():
+        for event_type, data in stream_chat(messages, system, tools, run_tool):
+            yield f"data: {json.dumps({'type': event_type, 'data': data})}\n\n"
+
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control":    "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection":       "keep-alive",
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Data APIs
+# ---------------------------------------------------------------------------
 
 @app.route("/api/groomers")
 def list_groomers():
@@ -105,11 +141,52 @@ def list_groomers():
         rows = conn.execute(
             "SELECT id, name, business_name, avg_rating, total_reviews, specialization_tags FROM groomers ORDER BY id"
         ).fetchall()
-    import json
     return jsonify([
         {**dict(r), "specialization_tags": json.loads(r["specialization_tags"])}
         for r in rows
     ])
+
+
+@app.route("/api/profile")
+def api_profile():
+    phone = request.args.get("phone", "").strip()
+    if not phone:
+        return jsonify({"error": "Phone number required."}), 400
+
+    with get_conn() as conn:
+        owner = conn.execute("SELECT * FROM owners WHERE phone=?", (phone,)).fetchone()
+        if not owner:
+            return jsonify({"found": False}), 404
+
+        dogs = conn.execute(
+            "SELECT id, name, breed, age_years, coat_type, temperament_tags FROM dogs WHERE owner_id=?",
+            (owner["id"],),
+        ).fetchall()
+
+        bookings = conn.execute("""
+            SELECT b.id, b.date, b.time, b.status, b.cut_style, b.total_price,
+                   d.name AS dog_name, d.breed,
+                   g.name AS groomer_name, g.business_name,
+                   s.name AS service_name,
+                   gr.health_flags, gr.next_recommended_groom
+            FROM bookings b
+            JOIN dogs d ON b.dog_id = d.id
+            JOIN groomers g ON b.groomer_id = g.id
+            JOIN services s ON b.service_id = s.id
+            LEFT JOIN groom_records gr ON gr.booking_id = b.id
+            WHERE b.owner_id=?
+            ORDER BY b.date DESC LIMIT 10
+        """, (owner["id"],)).fetchall()
+
+    return jsonify({
+        "found":    True,
+        "owner":    {"id": owner["id"], "name": owner["name"], "phone": owner["phone"]},
+        "dogs":     [
+            {**dict(d), "temperament_tags": json.loads(d["temperament_tags"])}
+            for d in dogs
+        ],
+        "bookings": [dict(b) for b in bookings],
+    })
 
 
 if __name__ == "__main__":

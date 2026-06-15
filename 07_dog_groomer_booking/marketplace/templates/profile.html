@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KindPaw — My Profile</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="profile-page">
+
+  <header class="profile-header">
+    <a href="/" class="logo">🐾 KindPaw</a>
+  </header>
+
+  <!-- Phone lookup -->
+  <div class="profile-lookup" id="lookup">
+    <h1>Your KindPaw profile</h1>
+    <p class="profile-sub">Enter the phone number you booked with</p>
+    <div class="lookup-form">
+      <input type="tel" id="phone-input" placeholder="(503) 555-0101" autocomplete="tel">
+      <button onclick="lookup()">Find my profile</button>
+    </div>
+    <p class="profile-hint">Try: <code>(503) 555-0101</code> (Emma) or <code>(503) 555-0202</code> (James)</p>
+  </div>
+
+  <!-- Profile content (hidden until lookup) -->
+  <div id="profile-content" style="display:none">
+
+    <div class="profile-welcome">
+      <div>
+        <h1 id="owner-name"></h1>
+        <p id="owner-phone" class="profile-sub"></p>
+      </div>
+      <a href="/owner" class="btn-primary">Chat with Sage →</a>
+    </div>
+
+    <!-- Dogs -->
+    <section class="profile-section">
+      <h2>Your dogs</h2>
+      <div id="dogs-list" class="dogs-grid"></div>
+    </section>
+
+    <!-- Bookings -->
+    <section class="profile-section">
+      <h2>Booking history</h2>
+      <div id="bookings-list" class="bookings-list"></div>
+    </section>
+
+  </div>
+
+  <div id="not-found" style="display:none" class="not-found">
+    <p>No account found for that number.</p>
+    <a href="/owner">Create one with Sage →</a>
+  </div>
+
+</div>
+
+<script>
+  async function lookup() {
+    const phone = document.getElementById('phone-input').value.trim();
+    if (!phone) return;
+
+    const res  = await fetch(`/api/profile?phone=${encodeURIComponent(phone)}`);
+    const data = await res.json();
+
+    if (!data.found) {
+      document.getElementById('not-found').style.display = 'block';
+      return;
+    }
+
+    // Owner header
+    document.getElementById('owner-name').textContent  = data.owner.name;
+    document.getElementById('owner-phone').textContent = data.owner.phone;
+
+    // Dogs
+    const dogsEl = document.getElementById('dogs-list');
+    dogsEl.innerHTML = data.dogs.map(d => `
+      <div class="dog-card">
+        <div class="dog-avatar">${d.breed.charAt(0)}</div>
+        <div>
+          <div class="dog-name">${d.name}</div>
+          <div class="dog-breed">${d.breed}${d.age_years ? ` · ${d.age_years}yr` : ''}</div>
+          <div class="dog-tags">${(d.temperament_tags || []).map(t => `<span class="tag">${t}</span>`).join('')}</div>
+        </div>
+      </div>
+    `).join('') || '<p class="empty">No dogs yet — tell Sage about your dog to add them.</p>';
+
+    // Bookings
+    const booksEl = document.getElementById('bookings-list');
+    booksEl.innerHTML = data.bookings.map(b => `
+      <div class="booking-row">
+        <div class="booking-meta">
+          <span class="booking-status status--${b.status}">${b.status}</span>
+          <span class="booking-date">${b.date} at ${b.time}</span>
+          <span class="booking-ref">${b.id}</span>
+        </div>
+        <div class="booking-detail">
+          <strong>${b.dog_name}</strong> · ${b.service_name}${b.cut_style ? ` · ${b.cut_style}` : ''}
+        </div>
+        <div class="booking-groomer">${b.groomer_name} @ ${b.business_name}</div>
+        ${b.health_flags ? `<div class="booking-flag">⚠️ ${b.health_flags}</div>` : ''}
+        ${b.next_recommended_groom ? `<div class="booking-next">Next groom recommended: ${b.next_recommended_groom}</div>` : ''}
+      </div>
+    `).join('') || '<p class="empty">No bookings yet.</p>';
+
+    document.getElementById('lookup').style.display          = 'none';
+    document.getElementById('profile-content').style.display = 'block';
+  }
+
+  document.getElementById('phone-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') lookup();
+  });
+</script>
+</body>
+</html>

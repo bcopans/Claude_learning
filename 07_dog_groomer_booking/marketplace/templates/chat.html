@@ -7,119 +7,202 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="chat-app">
+<div class="chat-app">
 
-    <header class="chat-header">
-      <a href="/" class="logo">🐾 KindPaw</a>
-      <div class="chat-title">{{ title }}</div>
-    </header>
+  <header class="chat-header">
+    <a href="/" class="logo">🐾 KindPaw</a>
+    <div class="chat-title">{{ title }}</div>
+    {% if role == 'owner' %}
+    <a href="/profile" class="header-link">My profile →</a>
+    {% endif %}
+  </header>
 
-    <div class="chat-messages" id="messages"></div>
+  <div class="chat-messages" id="messages"></div>
 
-    <div class="suggestions" id="suggestions">
-      {% if role == 'owner' %}
-        <button class="chip" onclick="useSuggestion(this)">I have a Goldendoodle — what cut styles suit them?</button>
-        <button class="chip" onclick="useSuggestion(this)">Find me a groomer good with anxious dogs in Portland</button>
-        <button class="chip" onclick="useSuggestion(this)">My phone is (503) 555-0101 — show me Max's history</button>
-        <button class="chip" onclick="useSuggestion(this)">Book Max's teddy bear cut with Sarah again</button>
-      {% else %}
-        <button class="chip" onclick="useSuggestion(this)">Pull up the dog card for my next appointment</button>
-        <button class="chip" onclick="useSuggestion(this)">Complete booking KP-A1003 — all clear, no health flags</button>
-        <button class="chip" onclick="useSuggestion(this)">Block 14:00 on 2026-06-20 — I have a personal appointment</button>
-        <button class="chip" onclick="useSuggestion(this)">Show me my reviews</button>
-      {% endif %}
-    </div>
-
-    <div class="chat-input-bar">
-      <input type="text" id="input" placeholder="Type a message…" autocomplete="off">
-      <button id="send-btn" onclick="sendMessage()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-      </button>
-    </div>
-
+  <div class="suggestions" id="suggestions">
+    {% if role == 'owner' %}
+      <button class="chip" onclick="useSuggestion(this)">I have a Goldendoodle — what cut styles suit them?</button>
+      <button class="chip" onclick="useSuggestion(this)">Find a groomer good with anxious dogs in Portland</button>
+      <button class="chip" onclick="useSuggestion(this)">My phone is (503) 555-0101 — show me Max's history</button>
+      <button class="chip" onclick="useSuggestion(this)">Book Max's teddy bear cut with Sarah again</button>
+    {% else %}
+      <button class="chip" onclick="useSuggestion(this)">Pull up the dog card for my next appointment</button>
+      <button class="chip" onclick="useSuggestion(this)">Complete booking KP-A1003 — all clear, no flags</button>
+      <button class="chip" onclick="useSuggestion(this)">Block 14:00 on 2026-06-20 — personal appointment</button>
+      <button class="chip" onclick="useSuggestion(this)">Show me my reviews</button>
+    {% endif %}
   </div>
 
-  <script>
-    const INITIAL = {{ initial_message | tojson }};
-    const messagesEl = document.getElementById('messages');
-    const inputEl    = document.getElementById('input');
-    const sendBtn    = document.getElementById('send-btn');
+  <div class="chat-input-bar">
+    <input type="text" id="input" placeholder="Type a message…" autocomplete="off">
+    <button id="send-btn" onclick="sendMessage()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+    </button>
+  </div>
 
-    function escapeHtml(text) {
-      return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
+</div>
 
-    function addMessage(text, role) {
-      const wrap = document.createElement('div');
-      wrap.className = `msg msg--${role}`;
-      const bubble = document.createElement('div');
-      bubble.className = 'bubble';
-      // Convert newlines and basic markdown-ish formatting
-      bubble.innerHTML = escapeHtml(text)
-        .replace(/\n/g, '<br>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>');
-      wrap.appendChild(bubble);
-      messagesEl.appendChild(wrap);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
+<script>
+  const INITIAL   = {{ initial_message | tojson }};
+  const msgEl     = document.getElementById('messages');
+  const inputEl   = document.getElementById('input');
+  const sendBtn   = document.getElementById('send-btn');
+  let   streaming = false;
 
-    function showTyping() {
-      const wrap = document.createElement('div');
-      wrap.className = 'msg msg--assistant';
-      wrap.id = 'typing';
-      wrap.innerHTML = '<div class="bubble typing"><span></span><span></span><span></span></div>';
-      messagesEl.appendChild(wrap);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
+  // ── Helpers ──────────────────────────────────────────────────────────────
 
-    function removeTyping() {
-      document.getElementById('typing')?.remove();
-    }
+  function esc(t) {
+    return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
 
-    async function sendMessage(override) {
-      const text = override ?? inputEl.value.trim();
-      if (!text) return;
-      inputEl.value = '';
+  function renderText(t) {
+    return esc(t)
+      .replace(/\n/g,'<br>')
+      .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+      .replace(/`([^`]+)`/g,'<code>$1</code>');
+  }
 
-      // Hide suggestions after first real user message
-      if (!override) {
-        document.getElementById('suggestions').style.display = 'none';
-        addMessage(text, 'user');
+  function scrollBottom() {
+    msgEl.scrollTop = msgEl.scrollHeight;
+  }
+
+  // ── Message creation ─────────────────────────────────────────────────────
+
+  function addUserMsg(text) {
+    const row = document.createElement('div');
+    row.className = 'msg msg--user';
+    row.innerHTML = `<div class="bubble">${renderText(text)}</div>`;
+    msgEl.appendChild(row);
+    scrollBottom();
+  }
+
+  function createAssistantBubble() {
+    const row = document.createElement('div');
+    row.className = 'msg msg--assistant';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    row.appendChild(bubble);
+    msgEl.appendChild(row);
+    scrollBottom();
+    return bubble;
+  }
+
+  function createToolIndicator() {
+    const row = document.createElement('div');
+    row.className = 'msg msg--assistant';
+    row.id = 'tool-row';
+    row.innerHTML = '<div class="bubble tool-indicator"><span class="tool-dot"></span><span class="tool-label">Thinking...</span></div>';
+    msgEl.appendChild(row);
+    scrollBottom();
+    return row;
+  }
+
+  function updateToolIndicator(row, label) {
+    const el = row.querySelector('.tool-label');
+    if (el) el.textContent = label;
+    scrollBottom();
+  }
+
+  // ── Streaming ────────────────────────────────────────────────────────────
+
+  async function sendMessage(override) {
+    if (streaming) return;
+    const text = override ?? inputEl.value.trim();
+    if (!text) return;
+
+    inputEl.value = '';
+    document.getElementById('suggestions').style.display = 'none';
+
+    if (!override) addUserMsg(text);
+
+    streaming   = true;
+    sendBtn.disabled = true;
+    inputEl.disabled = true;
+
+    const toolRow  = createToolIndicator();
+    const bubble   = createAssistantBubble();
+    bubble.style.display = 'none'; // Hidden until text starts
+    let   hasText  = false;
+
+    try {
+      const res = await fetch('/api/chat/stream', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ message: text }),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let   buf     = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split('\n\n');
+        buf = parts.pop(); // keep incomplete last segment
+
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue;
+          let event;
+          try { event = JSON.parse(part.slice(6)); } catch { continue; }
+
+          if (event.type === 'tool') {
+            updateToolIndicator(toolRow, event.data);
+
+          } else if (event.type === 'text') {
+            if (!hasText) {
+              toolRow.remove();
+              bubble.style.display = '';
+              hasText = true;
+            }
+            bubble.innerHTML += renderText(event.data);
+            scrollBottom();
+
+          } else if (event.type === 'done') {
+            toolRow.remove();
+            if (!hasText) {
+              // Claude responded with no text (shouldn't normally happen)
+              bubble.remove();
+            }
+
+          } else if (event.type === 'error') {
+            toolRow.remove();
+            bubble.style.display = '';
+            bubble.innerHTML = `<em style="color:#c0392b">${esc(event.data)}</em>`;
+          }
+        }
       }
-
-      sendBtn.disabled = true;
-      showTyping();
-
-      try {
-        const res  = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text }),
-        });
-        const data = await res.json();
-        removeTyping();
-        addMessage(data.reply ?? data.error ?? 'Something went wrong.', 'assistant');
-      } catch (e) {
-        removeTyping();
-        addMessage('Connection error — please try again.', 'assistant');
-      }
-
-      sendBtn.disabled = false;
-      inputEl.focus();
+    } catch (e) {
+      toolRow.remove();
+      bubble.style.display = '';
+      bubble.innerHTML = '<em style="color:#c0392b">Connection error — please try again.</em>';
     }
 
-    function useSuggestion(btn) {
-      document.getElementById('suggestions').style.display = 'none';
-      const text = btn.textContent.trim();
-      addMessage(text, 'user');
-      sendMessage(text);
-    }
+    streaming        = false;
+    sendBtn.disabled = false;
+    inputEl.disabled = false;
+    inputEl.focus();
+  }
 
-    inputEl.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(); });
+  function useSuggestion(btn) {
+    document.getElementById('suggestions').style.display = 'none';
+    const text = btn.textContent.trim();
+    addUserMsg(text);
+    sendMessage(text);
+  }
 
-    // Auto-greet on load
-    window.addEventListener('load', () => sendMessage(INITIAL));
-  </script>
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) sendMessage();
+  });
+
+  // Auto-greet
+  window.addEventListener('load', () => sendMessage(INITIAL));
+</script>
 </body>
 </html>

@@ -286,7 +286,190 @@ body {
 #send-btn:hover:not(:disabled) { background: var(--green-dark); }
 #send-btn:disabled { opacity: 0.4; cursor: default; }
 
-/* Responsive */
+/* ─── Tool indicator ─── */
+.tool-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.tool-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: tool-pulse 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes tool-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50%       { opacity: 1;   transform: scale(1.1); }
+}
+
+/* ─── Chat header link ─── */
+.header-link {
+  margin-left: auto;
+  font-size: 0.82rem;
+  color: var(--green);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.header-link:hover { text-decoration: underline; }
+
+/* ─── Profile page ─── */
+.profile-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 24px 60px;
+}
+
+.profile-header {
+  margin-bottom: 40px;
+}
+
+.profile-lookup {
+  text-align: center;
+  padding: 48px 24px;
+}
+.profile-lookup h1 { font-size: 1.6rem; margin-bottom: 8px; }
+.profile-sub       { color: var(--muted); font-size: 0.95rem; margin-bottom: 24px; }
+.profile-hint      { color: var(--muted); font-size: 0.82rem; margin-top: 12px; }
+.profile-hint code { background: var(--bg); padding: 2px 6px; border-radius: 4px; }
+
+.lookup-form {
+  display: flex;
+  gap: 10px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+.lookup-form input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  outline: none;
+}
+.lookup-form input:focus { border-color: var(--green); }
+.lookup-form button {
+  background: var(--green);
+  color: var(--white);
+  border: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.lookup-form button:hover { background: var(--green-dark); }
+
+.profile-welcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.profile-welcome h1 { font-size: 1.6rem; }
+
+.btn-primary {
+  background: var(--green);
+  color: var(--white);
+  text-decoration: none;
+  padding: 12px 22px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: var(--green-dark); }
+
+.profile-section { margin-bottom: 40px; }
+.profile-section h2 { font-size: 1.1rem; margin-bottom: 16px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.8rem; }
+
+/* Dogs grid */
+.dogs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+
+.dog-card {
+  background: var(--white);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  box-shadow: var(--shadow);
+}
+.dog-avatar {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--green-light);
+  color: var(--green);
+  font-weight: 700;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.dog-name  { font-weight: 700; font-size: 1rem; }
+.dog-breed { color: var(--muted); font-size: 0.82rem; margin-top: 2px; }
+.dog-tags  { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+.tag {
+  background: var(--green-light);
+  color: var(--green);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+}
+
+/* Bookings list */
+.bookings-list { display: flex; flex-direction: column; gap: 10px; }
+
+.booking-row {
+  background: var(--white);
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: var(--shadow);
+}
+.booking-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.booking-status {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.status--confirmed  { background: #E8F5EF; color: var(--green); }
+.status--completed  { background: #EEF2FF; color: #4F46E5; }
+.status--cancelled  { background: #FEE2E2; color: #DC2626; }
+.booking-date       { color: var(--muted); font-size: 0.85rem; }
+.booking-ref        { color: var(--muted); font-size: 0.78rem; margin-left: auto; font-family: monospace; }
+.booking-detail     { font-size: 0.95rem; margin-bottom: 2px; }
+.booking-groomer    { color: var(--muted); font-size: 0.85rem; }
+.booking-flag       { margin-top: 8px; color: #B45309; font-size: 0.85rem; background: #FFFBEB; padding: 6px 10px; border-radius: 6px; }
+.booking-next       { margin-top: 6px; color: var(--green); font-size: 0.82rem; }
+
+.not-found { text-align: center; padding: 40px; color: var(--muted); }
+.not-found a { color: var(--green); }
+.empty { color: var(--muted); font-size: 0.9rem; }
+
+/* ─── Responsive ─── */
 @media (max-width: 600px) {
   .cards         { grid-template-columns: 1fr; }
   .bubble        { max-width: 86%; }
@@ -294,4 +477,7 @@ body {
   .landing       { padding: 40px 16px 32px; }
   .suggestions   { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
   .chip          { flex-shrink: 0; }
+  .profile-page  { padding: 24px 16px 40px; }
+  .lookup-form   { flex-direction: column; }
+  .dogs-grid     { grid-template-columns: 1fr; }
 }
