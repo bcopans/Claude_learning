@@ -28,6 +28,8 @@ from stream_utils import stream_chat
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
 
+bootstrap()  # init + seed DB on every gunicorn worker startup
+
 # In-memory conversation store: session_id → {messages, role, ...}
 conversations: dict = {}
 
