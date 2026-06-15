@@ -943,6 +943,132 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
 .not-found { text-align: center; padding: 40px; color: var(--muted); }
 .not-found a { color: var(--green); }
 
+/* ── Avatar upload overlay ── */
+.avatar-upload-wrap {
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.avatar-upload-wrap:hover .avatar-upload-btn { opacity: 1; }
+.avatar-upload-btn {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.avatar-photo {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Portfolio add card ── */
+.portfolio-add-card {
+  background: var(--surface);
+  border: 2px dashed var(--border);
+  border-radius: var(--r);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 120px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.portfolio-add-card:hover { border-color: var(--green); background: var(--green-light); }
+.portfolio-add-icon { font-size: 1.4rem; }
+.portfolio-add-label { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+.portfolio-add-card:hover .portfolio-add-label { color: var(--green); }
+
+/* ── Portfolio photo upload modal ── */
+.photo-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+@media (min-width: 540px) {
+  .photo-modal { align-items: center; padding: 16px; }
+}
+.photo-modal-card {
+  background: var(--surface);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  padding: 24px 20px 32px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+@media (min-width: 540px) {
+  .photo-modal-card { border-radius: var(--r-lg); }
+}
+.photo-modal-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
+
+.photo-drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: border-color 0.15s;
+}
+.photo-drop-zone:hover { border-color: var(--green); }
+.drop-preview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 20px;
+}
+
+.photo-modal-fields { display: flex; flex-direction: column; gap: 14px; margin-bottom: 16px; }
+
+/* ── Dog photo upload on profile ── */
+.dog-card-avatar-wrap {
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.dog-card-avatar-wrap:hover .dog-avatar-upload-btn { opacity: 1; }
+.dog-avatar-upload-btn {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.dog-avatar-photo {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
 /* ─────────────────────────────────────────────
    TABLET +
 ───────────────────────────────────────────── */

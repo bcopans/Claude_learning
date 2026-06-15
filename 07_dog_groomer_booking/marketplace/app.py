@@ -11,12 +11,16 @@ Pages:
   GET  /profile               owner profile lookup
 
 APIs:
-  GET  /api/groomers               all groomers (search page)
-  GET  /api/groomer/<id>           single groomer full detail
-  GET  /api/slots/<id>/<date>      available time slots
-  GET  /api/profile                owner lookup by phone
-  POST /api/book                   submit booking from UI
-  POST /api/chat/stream            streaming chat (SSE)
+  GET  /api/groomers                  all groomers (search page)
+  GET  /api/groomer/<id>              single groomer full detail
+  GET  /api/slots/<id>/<date>         available time slots
+  GET  /api/profile                   owner lookup by phone
+  POST /api/book                      submit booking from UI
+  POST /api/upload                    upload an image, returns {url}
+  POST /api/groomer/<id>/photo        set groomer profile photo
+  POST /api/dog/<id>/photo            set dog profile photo
+  POST /api/portfolio-photo           add a portfolio groom photo
+  POST /api/chat/stream               streaming chat (SSE)
 """
 
 import json
@@ -37,6 +41,25 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
 
 bootstrap()
+
+# ── Ensure photo_url columns exist (migration for existing DBs) ───────────────
+def _add_photo_columns():
+    with get_conn() as conn:
+        for sql in [
+            "ALTER TABLE groomers ADD COLUMN photo_url TEXT DEFAULT ''",
+            "ALTER TABLE dogs     ADD COLUMN photo_url TEXT DEFAULT ''",
+        ]:
+            try:
+                conn.execute(sql)
+                conn.commit()
+            except Exception:
+                pass  # column already exists
+
+_add_photo_columns()
+
+UPLOAD_DIR      = os.path.join(os.path.dirname(__file__), "static", "uploads")
+ALLOWED_EXTS    = {"png", "jpg", "jpeg", "gif", "webp"}
+MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # 8 MB
 
 
 # ─── Pages ───────────────────────────────────────────────────────────────────
@@ -117,20 +140,21 @@ def api_groomers():
                 "SELECT MIN(price) as p FROM services WHERE groomer_id=?", (g["id"],)
             ).fetchone()["p"]
             result.append({
-                "id":                g["id"],
-                "name":              g["name"],
-                "business_name":     g["business_name"],
-                "location":          g["location"],
-                "bio":               g["bio"],
-                "avg_rating":        g["avg_rating"],
-                "total_reviews":     g["total_reviews"],
-                "certification_tags": json.loads(g["certification_tags"]),
+                "id":                  g["id"],
+                "name":                g["name"],
+                "business_name":       g["business_name"],
+                "location":            g["location"],
+                "bio":                 g["bio"],
+                "avg_rating":          g["avg_rating"],
+                "total_reviews":       g["total_reviews"],
+                "certification_tags":  json.loads(g["certification_tags"]),
                 "specialization_tags": json.loads(g["specialization_tags"]),
-                "breed_expertise":   json.loads(g["breed_expertise"]),
-                "cut_specialties":   json.loads(g["cut_specialties"]),
-                "starting_from":     min_price,
-                "lat":               g["lat"] if g["lat"] else 0,
-                "lng":               g["lng"] if g["lng"] else 0,
+                "breed_expertise":     json.loads(g["breed_expertise"]),
+                "cut_specialties":     json.loads(g["cut_specialties"]),
+                "starting_from":       min_price,
+                "lat":                 g["lat"] if g["lat"] else 0,
+                "lng":                 g["lng"] if g["lng"] else 0,
+                "photo_url":           g["photo_url"] or "",
             })
     return jsonify(result)
 
@@ -167,21 +191,22 @@ def api_groomer(groomer_id):
         """, (groomer_id,)).fetchall()
 
     return jsonify({
-        "id":                g["id"],
-        "name":              g["name"],
-        "business_name":     g["business_name"],
-        "location":          g["location"],
-        "phone":             g["phone"],
-        "bio":               g["bio"],
-        "avg_rating":        g["avg_rating"],
-        "total_reviews":     g["total_reviews"],
-        "certification_tags": json.loads(g["certification_tags"]),
+        "id":                  g["id"],
+        "name":                g["name"],
+        "business_name":       g["business_name"],
+        "location":            g["location"],
+        "phone":               g["phone"],
+        "bio":                 g["bio"],
+        "avg_rating":          g["avg_rating"],
+        "total_reviews":       g["total_reviews"],
+        "certification_tags":  json.loads(g["certification_tags"]),
         "specialization_tags": json.loads(g["specialization_tags"]),
-        "breed_expertise":   json.loads(g["breed_expertise"]),
-        "cut_specialties":   json.loads(g["cut_specialties"]),
-        "services":          [dict(s) for s in services],
-        "portfolio":         [dict(p) for p in photos],
-        "reviews":           [dict(r) for r in reviews],
+        "breed_expertise":     json.loads(g["breed_expertise"]),
+        "cut_specialties":     json.loads(g["cut_specialties"]),
+        "photo_url":           g["photo_url"] or "",
+        "services":            [dict(s) for s in services],
+        "portfolio":           [dict(p) for p in photos],
+        "reviews":             [dict(r) for r in reviews],
     })
 
 
@@ -221,9 +246,9 @@ def api_profile():
             WHERE b.owner_id=? ORDER BY b.date DESC LIMIT 10
         """, (owner["id"],)).fetchall()
     return jsonify({
-        "found":    True,
-        "owner":    {"id": owner["id"], "name": owner["name"], "phone": owner["phone"]},
-        "dogs":     [{**dict(d), "temperament_tags": json.loads(d["temperament_tags"])} for d in dogs],
+        "found":  True,
+        "owner":  {"id": owner["id"], "name": owner["name"], "phone": owner["phone"]},
+        "dogs":   [{**dict(d), "temperament_tags": json.loads(d["temperament_tags"]), "photo_url": d["photo_url"] or ""} for d in dogs],
         "bookings": [dict(b) for b in bookings],
     })
 
@@ -286,6 +311,68 @@ def api_register():
         "owner":   {"id": owner_id, "name": name, "phone": phone},
         "dogs":    dogs,
     })
+
+
+# ─── Photo upload APIs ───────────────────────────────────────────────────────
+
+@app.route("/api/upload", methods=["POST"])
+def api_upload():
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    f = request.files["file"]
+    if not f.filename:
+        return jsonify({"error": "No file selected"}), 400
+
+    ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else ""
+    if ext not in ALLOWED_EXTS:
+        return jsonify({"error": "Images only (jpg, png, gif, webp)"}), 400
+
+    f.seek(0, 2)
+    size = f.tell()
+    f.seek(0)
+    if size > MAX_UPLOAD_BYTES:
+        return jsonify({"error": "File too large (max 8 MB)"}), 400
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    f.save(os.path.join(UPLOAD_DIR, filename))
+    return jsonify({"url": f"/static/uploads/{filename}"})
+
+
+@app.route("/api/groomer/<int:groomer_id>/photo", methods=["POST"])
+def api_groomer_photo(groomer_id):
+    url = (request.json or {}).get("url", "").strip()
+    with get_conn() as conn:
+        conn.execute("UPDATE groomers SET photo_url=? WHERE id=?", (url, groomer_id))
+        conn.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/api/dog/<int:dog_id>/photo", methods=["POST"])
+def api_dog_photo(dog_id):
+    url = (request.json or {}).get("url", "").strip()
+    with get_conn() as conn:
+        conn.execute("UPDATE dogs SET photo_url=? WHERE id=?", (url, dog_id))
+        conn.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/api/portfolio-photo", methods=["POST"])
+def api_portfolio_photo():
+    data = request.json or {}
+    required = ["groomer_id", "dog_id", "url"]
+    missing  = [f for f in required if not data.get(f)]
+    if missing:
+        return jsonify({"error": f"Missing: {', '.join(missing)}"}), 400
+    with get_conn() as conn:
+        conn.execute("""
+            INSERT INTO groom_photos
+              (dog_id, groomer_id, photo_url, caption, cut_style, is_portfolio, verified)
+            VALUES (?,?,?,?,?,1,0)
+        """, (data["dog_id"], data["groomer_id"], data["url"],
+              data.get("caption", ""), data.get("cut_style", "")))
+        conn.commit()
+    return jsonify({"success": True})
 
 
 # ─── Streaming chat ───────────────────────────────────────────────────────────

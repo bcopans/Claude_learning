@@ -197,24 +197,21 @@ def init_db():
         conn.commit()
 
 
-def _needs_reset() -> bool:
-    """Return True if the DB is missing or needs a schema upgrade."""
-    if not os.path.exists(DB_PATH):
-        return True
+def bootstrap():
+    """Initialize and seed the database. Call once at startup."""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        count = conn.execute("SELECT COUNT(*) FROM groomers").fetchone()[0]
-        if count < 6:
+        if os.path.exists(DB_PATH):
+            conn = sqlite3.connect(DB_PATH)
+            count = conn.execute("SELECT COUNT(*) FROM groomers").fetchone()[0]
+            cols = [row[1] for row in conn.execute("PRAGMA table_info(groomers)").fetchall()]
             conn.close()
-            return True
-        # Check for lat column
-        cols = [row[1] for row in conn.execute("PRAGMA table_info(groomers)").fetchall()]
-        conn.close()
-        if "lat" not in cols:
-            return True
-        return False
+            if count < 8 or "lat" not in cols:
+                os.remove(DB_PATH)
     except Exception:
-        return True
+        if os.path.exists(DB_PATH):
+            os.remove(DB_PATH)
+    init_db()
+    seed_db()
 
 
 def seed_db():
@@ -223,82 +220,114 @@ def seed_db():
             return
 
         # ------------------------------------------------------------------ #
-        # GROOMERS
+        # GROOMERS — 8 NYC groomers
         # ------------------------------------------------------------------ #
+        # (name, business_name, location, lat, lng, phone, email, bio,
+        #  cert_tags, spec_tags, breed_expertise, cut_specialties,
+        #  avg_rating, total_reviews, verified)
         groomer_rows = [
-            # (name, business_name, location, lat, lng, phone, email, bio,
-            #  cert_tags, spec_tags, breed_expertise, cut_specialties, avg_rating, total_reviews, verified)
             (
-                "Sarah Chen", "Gentle Paws Studio", "Pearl District, Portland, OR",
-                45.5279, -122.6862,
-                "(503) 555-0011", "sarah@gentlepaws.com",
-                "12 years grooming with a focus on anxious and sensitive dogs. "
-                "Every dog deserves to feel safe — I take my time and never rush.",
+                "Maya Chen", "Paws on the Park", "Upper West Side, NYC",
+                40.7870, -73.9754,
+                "(212)555-0011", "maya@pawsonthepark.com",
+                "10 years grooming Manhattan's most anxious pups. Quiet studio, no cage dryers, "
+                "one dog at a time. I grew up with a fearful rescue and built my whole practice "
+                "around making dogs feel safe.",
                 json.dumps(["Fear Free Certified", "NDGAA"]),
-                json.dumps(["anxious dogs", "puppies", "sensitive breeds"]),
+                json.dumps(["anxious dogs", "puppies", "noise-sensitive"]),
                 json.dumps(["Goldendoodle", "Poodle", "Cockapoo", "Cavapoo", "Labradoodle"]),
                 json.dumps(["teddy bear", "puppy cut", "lamb cut"]),
-                4.9, 87, 1,
+                4.9, 112, 1,
             ),
             (
-                "Marcus Webb", "The Grooming Gallery", "Alberta Arts District, Portland, OR",
-                45.5603, -122.6397,
-                "(503) 555-0022", "marcus@grooominggallery.com",
-                "15 years of competitive show grooming. I bring competition-level "
-                "precision to every pet groom. Flawless and technically perfect.",
+                "James Rivera", "Brooklyn Groom Co.", "Park Slope, Brooklyn, NYC",
+                40.6681, -73.9797,
+                "(718)555-0022", "james@brooklyngroomco.com",
+                "Park Slope's most-booked groomer for three years running. I do everything from "
+                "competition-prep Poodles to your neighbor's scruffy rescue. Precision scissor "
+                "work and a genuinely fun experience.",
                 json.dumps(["IPG Certified", "NDGAA"]),
-                json.dumps(["show cuts", "hand-stripping", "large breeds", "breed standard"]),
-                json.dumps(["Poodle", "Schnauzer", "Airedale", "German Shepherd", "Golden Retriever"]),
-                json.dumps(["continental", "show cut", "hand-strip", "sporting clip"]),
-                4.8, 134, 1,
+                json.dumps(["doodles", "show cuts", "breed standard", "large breeds"]),
+                json.dumps(["Poodle", "Golden Retriever", "German Shepherd", "Bernese Mountain Dog", "Doodles"]),
+                json.dumps(["teddy bear", "continental", "show cut", "sporting clip"]),
+                4.8, 189, 1,
             ),
             (
-                "Jen Park", "Cozy Coat Grooming", "Lake Oswego, OR",
-                45.4175, -122.6856,
-                "(503) 555-0033", "jen@cozycoat.com",
-                "Senior dogs and double-coat breeds are my specialty. Older dogs "
-                "need extra patience and gentleness — I treat every dog like my own.",
-                json.dumps(["Fear Free Certified"]),
-                json.dumps(["senior dogs", "double coats", "gentle handling"]),
-                json.dumps(["Siberian Husky", "Corgi", "Shih Tzu", "Maltese", "Bichon Frise"]),
-                json.dumps(["puppy cut", "deshed", "round head", "teddy bear"]),
-                4.9, 62, 1,
-            ),
-            (
-                "Kai Okonkwo", "Paw & Play Grooming", "North Portland, OR",
-                45.5798, -122.6809,
-                "(503) 555-0044", "kai@pawandplay.com",
-                "I specialize in puppies and high-energy dogs. First grooms should be "
-                "fun and positive — I build trust from day one so every future visit is easier.",
-                json.dumps(["Fear Free Certified"]),
-                json.dumps(["puppies", "first grooms", "energetic dogs"]),
-                json.dumps(["Labrador", "Golden Retriever", "Bernese Mountain Dog", "Boxer"]),
-                json.dumps(["bath & brush", "puppy cut", "breed trim"]),
-                4.7, 41, 1,
-            ),
-            (
-                "Sofia Martinez", "Bella Vita Pets", "SE Portland, OR",
-                45.5051, -122.6367,
-                "(503) 555-0055", "sofia@bellavitapets.com",
-                "Small breeds and detailed scissor work are my passion. I also offer "
-                "spa add-ons — blueberry facials, aromatherapy rinses, and paw balm treatments.",
+                "Priya Patel", "Tribeca Tails", "Tribeca, NYC",
+                40.7195, -74.0089,
+                "(212)555-0033", "priya@tribecatails.com",
+                "Boutique grooming for the dogs who deserve the best. Aromatherapy rinses, "
+                "blueberry facials, and scissor-only styling. My clients are small, precious, "
+                "and usually more well-dressed than I am.",
                 json.dumps(["NCMG Certified"]),
-                json.dumps(["small breeds", "detailed scissor work", "spa treatments"]),
-                json.dumps(["Maltese", "Bichon Frise", "Yorkshire Terrier", "Cavapoo", "Shih Tzu"]),
-                json.dumps(["teddy bear", "puppy cut", "show bichon", "lamb cut"]),
-                4.8, 78, 1,
+                json.dumps(["small breeds", "luxury spa", "detailed scissor work", "sensitive skin"]),
+                json.dumps(["Maltese", "Yorkshire Terrier", "Shih Tzu", "Bichon Frise", "Cavapoo", "Havanese"]),
+                json.dumps(["puppy cut", "teddy bear", "show bichon", "traditional yorkie", "top knot"]),
+                4.9, 94, 1,
             ),
             (
-                "David Kim", "ProGroom PDX", "Beaverton, OR",
-                45.4871, -122.8037,
-                "(503) 555-0066", "david@progroompdx.com",
-                "Competition prep and breed-standard grooming for owners who demand the best. "
-                "Wire-coat specialist with 10 years of AKC show experience.",
+                "Marcus Johnson", "Queens Paws", "Astoria, Queens, NYC",
+                40.7721, -73.9303,
+                "(718)555-0044", "marcus@queenspaws.com",
+                "Queens's go-to for the big dogs. I specialize in high-shedding working breeds "
+                "— Huskies, Shepherds, Labs. High-velocity dryers, thorough deshed treatments, "
+                "and a huge workspace so your big dog isn't cramped.",
+                json.dumps(["Fear Free Certified"]),
+                json.dumps(["working breeds", "deshed", "large breeds", "double coats"]),
+                json.dumps(["Siberian Husky", "German Shepherd", "Labrador Retriever", "Golden Retriever", "Boxer", "Australian Shepherd"]),
+                json.dumps(["deshed", "bath & trim", "breed trim", "sanitary clip"]),
+                4.7, 67, 1,
+            ),
+            (
+                "Sofia Klein", "Village Grooming Studio", "West Village, NYC",
+                40.7336, -74.0027,
+                "(212)555-0055", "sofia@villagegroomingstudio.com",
+                "Senior dogs are my specialty and my joy. I adjust every aspect of the groom "
+                "for older dogs — longer breaks, anti-fatigue mats, warm rinses. They deserve "
+                "just as much care as the young ones, maybe more.",
+                json.dumps(["Fear Free Certified", "NDGAA"]),
+                json.dumps(["senior dogs", "gentle handling", "arthritic dogs", "small breeds"]),
+                json.dumps(["Shih Tzu", "Maltese", "Bichon Frise", "Poodle", "Cocker Spaniel", "Cavalier King Charles Spaniel"]),
+                json.dumps(["puppy cut", "teddy bear", "round head", "bath & trim"]),
+                4.9, 78, 1,
+            ),
+            (
+                "David Park", "ProGroom NYC", "Upper East Side, NYC",
+                40.7741, -73.9566,
+                "(212)555-0066", "david@progroomnyc.com",
+                "Former AKC handler turned full-time groomer. I compete, I judge, and I bring "
+                "that same eye to every pet groom. If you want your Poodle's topknot to be "
+                "geometrically perfect, I'm your groomer.",
                 json.dumps(["IPG Certified", "AKC S.A.F.E."]),
-                json.dumps(["breed standards", "competition prep", "wire coats"]),
-                json.dumps(["Poodle", "Schnauzer", "Terriers", "Cocker Spaniel", "Doodles"]),
-                json.dumps(["continental", "hand-strip", "sporting clip", "traditional schnauzer"]),
-                4.9, 103, 1,
+                json.dumps(["competition prep", "breed standard", "hand-stripping", "wire coats"]),
+                json.dumps(["Poodle", "Schnauzer", "Airedale Terrier", "Wire Fox Terrier", "Cocker Spaniel"]),
+                json.dumps(["continental", "hand-strip", "sporting clip", "traditional schnauzer", "show cut"]),
+                4.9, 143, 1,
+            ),
+            (
+                "Aisha Williams", "Williamsburg Wags", "Williamsburg, Brooklyn, NYC",
+                40.7081, -73.9571,
+                "(718)555-0077", "aisha@williamsburgwags.com",
+                "I specialize in first grooms and reactive dogs. Building a good association "
+                "early changes a dog's whole life. Lots of treats, lots of patience, zero rush. "
+                "Williamsburg pickup available.",
+                json.dumps(["Fear Free Certified"]),
+                json.dumps(["puppies", "first grooms", "reactive dogs", "positive reinforcement"]),
+                json.dumps(["Goldendoodle", "Labrador Retriever", "Golden Retriever", "Mixed Breed", "Cockapoo"]),
+                json.dumps(["puppy cut", "teddy bear", "bath & tidy", "deshed"]),
+                4.8, 55, 1,
+            ),
+            (
+                "Carlos Mendez", "Bronx Pro Groomers", "Riverdale, Bronx, NYC",
+                40.8965, -73.9086,
+                "(718)555-0088", "carlos@bronxprogroomers.com",
+                "Serving the Bronx for 8 years. Honest pricing, no upsells, big hearts for "
+                "big dogs. I work with families who want quality care without Manhattan prices.",
+                json.dumps(["NDGAA"]),
+                json.dumps(["large breeds", "budget-friendly", "families", "double coats"]),
+                json.dumps(["Labrador Retriever", "German Shepherd", "Golden Retriever", "Boxer", "Pitbull", "Rottweiler"]),
+                json.dumps(["bath & dry", "deshed", "breed trim", "puppy cut"]),
+                4.6, 84, 1,
             ),
         ]
 
@@ -313,50 +342,66 @@ def seed_db():
 
         # ------------------------------------------------------------------ #
         # SERVICES
-        # service IDs are assigned sequentially by insertion order:
-        #   Sarah  (groomer 1): 1–5
-        #   Marcus (groomer 2): 6–10
-        #   Jen    (groomer 3): 11–15
-        #   Kai    (groomer 4): 16–20
-        #   Sofia  (groomer 5): 21–24
-        #   David  (groomer 6): 25–30
+        # Service IDs assigned sequentially:
+        #   Maya    (groomer 1): svc  1–6
+        #   James   (groomer 2): svc  7–11
+        #   Priya   (groomer 3): svc 12–16
+        #   Marcus  (groomer 4): svc 17–21
+        #   Sofia   (groomer 5): svc 22–26
+        #   David   (groomer 6): svc 27–31
+        #   Aisha   (groomer 7): svc 32–36
+        #   Carlos  (groomer 8): svc 37–41
         # ------------------------------------------------------------------ #
         service_rows = [
-            # Sarah (groomer_id=1)
-            (1, "Bath & Dry",            "Full bath, blow-dry, and brush-out",                        50,  60,  "flat"),
-            (1, "Teddy Bear Full Groom", "Bath, dry, and teddy bear scissor trim",                    85,  90,  "flat"),
-            (1, "Puppy First Groom",     "Gentle first-groom introduction — bath, dry, light tidy",   65,  75,  "flat"),
-            (1, "Nail Trim",             "Trim and file all nails",                                   20,  20,  "flat"),
-            (1, "De-shed Treatment",     "Deep deshedding bath, high-velocity blow-out, brush-out",   70,  90,  "from"),
-            # Marcus (groomer_id=2)
-            (2, "Show Groom",       "Full breed-standard competition groom",                    120, 120, "from"),
-            (2, "Full Groom",       "Bath, dry, breed-specific scissor trim",                    80,  90,  "flat"),
-            (2, "Hand Strip",       "Hand-stripping for wire-coated breeds",                    150, 150, "from"),
-            (2, "Bath & Dry",       "Full bath, blow-dry, and brush-out",                        55,  60,  "flat"),
-            (2, "Nail & Ear Clean", "Nail trim plus ear cleaning",                               35,  30,  "flat"),
-            # Jen (groomer_id=3)
-            (3, "Senior Dog Spa",  "Gentle full groom with joint-aware handling and soothing rinse", 65, 90, "flat"),
-            (3, "Deshed & Bath",   "Deshedding treatment, bath, blow-out — ideal for double coats",  75, 90, "flat"),
-            (3, "Full Groom",      "Bath, dry, and scissor or clipper trim",                         70, 90, "flat"),
-            (3, "Bath & Tidy",     "Bath, blow-dry, and light tidy of paws, face, and sanitary",     45, 60, "flat"),
-            (3, "Nail Trim",       "Trim and file all nails",                                        20, 20, "flat"),
-            # Kai (groomer_id=4)
-            (4, "Bath & Brush",       "Full bath, blow-dry, and thorough brush-out",                    45, 60,  "flat"),
-            (4, "Full Groom",         "Bath, dry, and breed-appropriate trim",                          75, 90,  "flat"),
-            (4, "Puppy Package",      "Fun, positive first-groom experience — bath, dry, light trim",    55, 75,  "flat"),
-            (4, "Deshed Treatment",   "High-velocity blow-out plus thorough deshedding brush",           60, 90,  "from"),
-            (4, "Teeth Brushing",     "Enzymatic toothpaste brush — add-on or standalone",              15, 15,  "flat"),
-            # Sofia (groomer_id=5)
-            (5, "Signature Groom", "Full spa groom with scissor finish and aromatherapy rinse",   90, 90, "flat"),
-            (5, "Bath & Style",    "Bath, blow-dry, and light scissor style",                     55, 75, "flat"),
-            (5, "Express Groom",   "Quick full groom — bath, dry, tidy trim, nails",              70, 75, "flat"),
-            (5, "Nail & Ear Care", "Nail trim, ear clean, and paw balm",                          30, 30, "flat"),
-            # David (groomer_id=6)
-            (6, "Competition Prep",   "Full competition-ready groom to breed standard",            130, 150, "from"),
-            (6, "Full Groom",         "Bath, dry, and breed-standard scissor trim",                 85,  90, "flat"),
-            (6, "Hand Strip",         "Hand-stripping for wire and rough coats",                   145, 150, "from"),
-            (6, "Bath & Dry",         "Full bath, blow-dry, and brush-out",                         60,  60, "flat"),
-            (6, "Breed Trim",         "Breed-standard clipper and scissor trim",                    95,  90, "from"),
+            # Maya (groomer_id=1) — svc 1-6
+            (1, "Bath & Dry",          "Full bath, blow-dry, and brush-out",                                   55,  60, "flat"),
+            (1, "Teddy Bear Groom",    "Bath, dry, and teddy bear scissor trim",                               90,  90, "flat"),
+            (1, "Puppy First Groom",   "Gentle first-groom introduction — bath, dry, light tidy",              70,  75, "flat"),
+            (1, "Nail Trim",           "Trim and file all nails",                                              25,  20, "flat"),
+            (1, "De-shed Treatment",   "Deep deshedding bath, high-velocity blow-out, brush-out",              75,  90, "from"),
+            (1, "Lamb Cut",            "Short body with fluffy leg furnishings — dramatic contrast style",     100, 105, "flat"),
+            # James (groomer_id=2) — svc 7-11
+            (2, "Teddy Bear Full Groom", "Bath, dry, and teddy bear scissor trim",                             95,  90, "flat"),
+            (2, "Show Groom",            "Full breed-standard competition groom",                             135, 120, "from"),
+            (2, "Full Groom",            "Bath, dry, breed-specific scissor trim",                             85,  90, "flat"),
+            (2, "Bath & Brush Out",      "Full bath, blow-dry, and thorough brush-out",                        60,  60, "flat"),
+            (2, "Nail & Ear Clean",      "Nail trim plus ear cleaning",                                        35,  30, "flat"),
+            # Priya (groomer_id=3) — svc 12-16
+            (3, "Signature Spa Groom", "Full spa groom with scissor finish and aromatherapy rinse",           110,  90, "flat"),
+            (3, "Bath & Style",        "Bath, blow-dry, and light scissor style",                              65,  75, "flat"),
+            (3, "Blueberry Facial Add-on", "Brightening blueberry facial and gentle eye area cleaning",        20,  15, "flat"),
+            (3, "Nail & Ear Care",     "Nail trim, ear clean, and paw balm",                                   30,  30, "flat"),
+            (3, "Full Scissor Groom",  "Complete scissor-only finish — no clippers, purely hand-styled",      125, 120, "flat"),
+            # Marcus (groomer_id=4) — svc 17-21
+            (4, "Bath & Dry",      "Full bath, blow-dry, and brush-out",                                       55,  60, "flat"),
+            (4, "Deshed & Bath",   "High-velocity deshed treatment with deep-clean bath",                      80,  90, "from"),
+            (4, "Full Groom",      "Bath, dry, and breed-appropriate trim",                                    75,  90, "flat"),
+            (4, "Nail Trim",       "Trim and file all nails",                                                  20,  20, "flat"),
+            (4, "Breed Trim",      "Breed-standard clipper and scissor trim",                                  85,  90, "flat"),
+            # Sofia (groomer_id=5) — svc 22-26
+            (5, "Senior Dog Spa",      "Gentle full groom with joint-aware handling and warm rinse",            70,  90, "flat"),
+            (5, "Gentle Full Groom",   "Full groom with extra time, breaks, and careful positioning",           80,  90, "flat"),
+            (5, "Bath & Tidy",         "Bath, blow-dry, and light tidy of paws, face, and sanitary",            50,  60, "flat"),
+            (5, "Nail Trim",           "Trim and file all nails",                                              20,  20, "flat"),
+            (5, "Cocker Spaniel Groom","Traditional Cocker groom with ear, feathering, and body scissor work", 90,  90, "flat"),
+            # David (groomer_id=6) — svc 27-31
+            (6, "Competition Prep", "Full competition-ready groom to breed standard",                         145, 150, "from"),
+            (6, "Full Groom",       "Bath, dry, and breed-standard scissor trim",                              95,  90, "flat"),
+            (6, "Hand Strip",       "Hand-stripping for wire and rough coats — no clippers",                  160, 150, "from"),
+            (6, "Bath & Dry",       "Full bath, blow-dry, and brush-out",                                      65,  60, "flat"),
+            (6, "Breed Trim",       "Breed-standard clipper and scissor trim",                                 110,  90, "from"),
+            # Aisha (groomer_id=7) — svc 32-36
+            (7, "Puppy First Groom",   "Fun, treat-based first groom — bath, dry, light tidy",                 65,  75, "flat"),
+            (7, "Bath & Tidy",         "Bath, blow-dry, and light tidy of paws, face, and sanitary",            50,  60, "flat"),
+            (7, "Full Groom",          "Bath, dry, and breed-appropriate trim",                                 80,  90, "flat"),
+            (7, "Deshed Treatment",    "High-velocity deshed with thorough brush-out",                          70,  90, "from"),
+            (7, "Nail Trim",           "Trim and file all nails",                                              20,  20, "flat"),
+            # Carlos (groomer_id=8) — svc 37-41
+            (8, "Bath & Dry",       "Full bath, blow-dry, and brush-out",                                      45,  60, "flat"),
+            (8, "Full Groom",       "Bath, dry, and breed-appropriate trim",                                   65,  90, "flat"),
+            (8, "Deshed & Bath",    "High-velocity deshed with deep-clean bath",                               70,  90, "from"),
+            (8, "Nail Trim",        "Trim and file all nails",                                                 18,  20, "flat"),
+            (8, "Large Breed Groom","Full groom for large and extra-large breeds, extra time included",         85, 120, "flat"),
         ]
 
         for row in service_rows:
@@ -366,61 +411,87 @@ def seed_db():
             )
 
         # ------------------------------------------------------------------ #
-        # OWNERS
+        # OWNERS — 12 NYC owners
         # ------------------------------------------------------------------ #
         owner_rows = [
-            ("Emma Torres",    "(503) 555-0101", "emma@example.com"),
-            ("James Kim",      "(503) 555-0202", "james@example.com"),
-            ("Mia Jackson",    "(503) 555-0303", "mia@example.com"),
-            ("Carlos Rivera",  "(503) 555-0404", "carlos@example.com"),
-            ("Aisha Thompson", "(503) 555-0505", "aisha@example.com"),
-            ("Ryan Chen",      "(503) 555-0606", "ryan@example.com"),
-            ("Lisa Park",      "(503) 555-0707", "lisa@example.com"),
+            ("Emma Torres",    "(212) 555-0101", "emma@example.com"),
+            ("James Kim",      "(718) 555-0202", "james@example.com"),
+            ("Mia Jackson",    "(646) 555-0303", "mia@example.com"),
+            ("Carlos Rivera",  "(929) 555-0404", "carlos@example.com"),
+            ("Aisha Thompson", "(212) 555-0505", "aisha@example.com"),
+            ("Ryan Chen",      "(718) 555-0606", "ryan@example.com"),
+            ("Lisa Park",      "(646) 555-0707", "lisa@example.com"),
+            ("Marcus Davis",   "(929) 555-0808", "marcus@example.com"),
+            ("Sophie Laurent", "(212) 555-0909", "sophie@example.com"),
+            ("Tom Nguyen",     "(718) 555-1010", "tom@example.com"),
+            ("Jennifer Walsh", "(646) 555-1111", "jennifer@example.com"),
+            ("Alex Santos",    "(929) 555-1212", "alex@example.com"),
         ]
         for row in owner_rows:
             conn.execute("INSERT INTO owners (name, phone, email) VALUES (?,?,?)", row)
 
         # ------------------------------------------------------------------ #
-        # DOGS
+        # DOGS — 18 dogs with varied breeds, ages, temperaments
+        # dog IDs assigned sequentially 1-18
+        # owner_id: Emma=1, James=2, Mia=3, Carlos=4, Aisha=5, Ryan=6,
+        #           Lisa=7, Marcus=8, Sophie=9, Tom=10, Jennifer=11, Alex=12
         # ------------------------------------------------------------------ #
         dog_rows = [
             # (owner_id, name, breed, age_years, weight_lbs, coat_type, temperament_tags, special_requests)
-            (1, "Max",    "Goldendoodle",       3.0,  45.0, "curly",
+            (1,  "Max",    "Goldendoodle",             3.0,  45.0, "curly",
              json.dumps(["anxious", "dislikes dryers", "gentle"]),
-             "Always use fragrance-free shampoo. Go slow with the dryer — Max gets nervous. Give him a treat at the start."),
-            (2, "Bella",  "Shih Tzu",           6.0,  12.0, "long",
-             json.dumps(["gentle", "patient"]),
-             "Keep topknot area clean. Bella likes being talked to during grooming."),
-            (2, "Buddy",  "Labrador Retriever", 1.0,  65.0, "short",
-             json.dumps(["energetic", "mouthy when excited"]),
-             "Buddy is still learning to stay still — patience appreciated!"),
-            (3, "Nala",   "Golden Retriever",   5.0,  58.0, "medium",
-             json.dumps(["calm", "loves treats"]),
-             "Nala loves a good treat after each step. She's very cooperative."),
-            (3, "Mochi",  "Miniature Poodle",   2.0,   8.0, "curly",
-             json.dumps(["spirited", "good with handling"]),
-             "Mochi likes music playing. She does great with handling."),
-            (4, "Duke",   "German Shepherd",    4.0,  70.0, "double",
-             json.dumps(["stoic", "nervous with strangers"]),
-             "Duke warms up slowly — please give him time to settle before starting."),
-            (5, "Luna",   "Siberian Husky",     3.0,  52.0, "double",
-             json.dumps(["energetic", "heavy shedder"]),
-             "Luna is a big shedder. Please do not shave — deshed only."),
-            (5, "Teddy",  "Bichon Frise",       8.0,  14.0, "curly",
-             json.dumps(["senior", "gentle", "easy to groom"]),
-             "Teddy is a senior — please keep sessions calm and unhurried."),
-            (6, "Charlie","Miniature Schnauzer", 2.0, 16.0, "wiry",
-             json.dumps(["alert", "cooperative"]),
-             "Charlie likes the traditional schnauzer look — keep the beard full."),
-            (6, "Ruby",   "Cavapoo",            1.0,  12.0, "wavy",
+             "Fragrance-free shampoo, go slow with dryer"),
+            (2,  "Bella",  "Shih Tzu",                 6.0,  12.0, "long",
+             json.dumps(["gentle", "patient", "good with handling"]),
+             "Keep topknot clean, she likes being talked to"),
+            (2,  "Buddy",  "Labrador Retriever",        1.0,  68.0, "short",
+             json.dumps(["energetic", "mouthy when excited", "treat-motivated"]),
+             "Bring extra treats, he's learning to stay still"),
+            (3,  "Nala",   "Golden Retriever",          5.0,  58.0, "medium",
+             json.dumps(["calm", "loves treats", "occasional ear sensitivity"]),
+             "Check ears gently, she had an infection last year"),
+            (3,  "Mochi",  "Miniature Poodle",          2.0,   8.0, "curly",
+             json.dumps(["spirited", "cooperative", "loves the dryer"]),
+             ""),
+            (4,  "Duke",   "German Shepherd",           4.0,  70.0, "double",
+             json.dumps(["stoic", "nervous with strangers", "warms up slowly"]),
+             "Let him sniff you first. Doesn't like face handling initially."),
+            (5,  "Luna",   "Siberian Husky",            3.0,  52.0, "double",
+             json.dumps(["energetic", "heavy shedder", "hates standing still"]),
+             "She blows coat twice a year, needs full deshed"),
+            (5,  "Teddy",  "Bichon Frise",              8.0,  14.0, "curly",
+             json.dumps(["senior", "arthritis in hips", "very gentle needed"]),
+             "Needs anti-fatigue mat. Hip joints are stiff. Keep groom short if needed."),
+            (6,  "Charlie","Miniature Schnauzer",        2.0,  16.0, "wiry",
+             json.dumps(["alert", "cooperative", "barks at clippers initially"]),
+             ""),
+            (6,  "Ruby",   "Cavapoo",                   1.0,  12.0, "wavy",
              json.dumps(["puppy", "excitable", "mouthy"]),
-             "Ruby is only 1 — please be patient. She's still learning to stand still."),
-            (7, "Zeus",   "Labrador Retriever", 4.0,  72.0, "short",
-             json.dumps(["friendly", "calm", "treat-motivated"]),
-             "Zeus is very treat-motivated — feel free to use treats freely."),
-            (7, "Coco",   "Maltese",           10.0,   7.0, "long",
-             json.dumps(["senior", "arthritic", "very gentle needed"]),
-             "Coco has arthritis in her hips — please handle her very gently and avoid long standing periods."),
+             "First few grooms — lots of treats and breaks"),
+            (7,  "Zeus",   "Labrador Retriever",        4.0,  72.0, "short",
+             json.dumps(["friendly", "calm", "easy"]),
+             ""),
+            (7,  "Coco",   "Maltese",                  10.0,   7.0, "long",
+             json.dumps(["senior", "arthritic", "very gentle handling essential"]),
+             "She is 10 and arthritic. Short sessions, she gets tired quickly."),
+            (8,  "Rosie",  "Golden Retriever",          2.0,  54.0, "medium",
+             json.dumps(["playful", "wiggly", "good-natured"]),
+             ""),
+            (9,  "Finn",   "Bernese Mountain Dog",      3.0,  88.0, "double",
+             json.dumps(["gentle giant", "nervous in new places", "treats help"]),
+             "Finn is big but gentle. Needs patience settling in."),
+            (10, "Daisy",  "Yorkshire Terrier",         4.0,   6.0, "long",
+             json.dumps(["sassy", "doesn't like paws touched", "cooperative otherwise"]),
+             "Go slowly on paw handling — she's getting better with training"),
+            (11, "Cooper", "Australian Shepherd",       5.0,  55.0, "double",
+             json.dumps(["energetic", "smart", "high energy"]),
+             ""),
+            (12, "Stella", "French Bulldog",            2.0,  24.0, "short",
+             json.dumps(["sensitive skin", "skin folds need cleaning", "good with handling"]),
+             "Clean skin folds carefully. She has sensitive skin — no harsh products."),
+            (4,  "Bruno",  "Boxer",                     3.0,  65.0, "short",
+             json.dumps(["friendly", "wiggly", "strong"]),
+             "He's strong so secure the table. Very friendly though!"),
         ]
         for row in dog_rows:
             conn.execute("""
@@ -430,11 +501,13 @@ def seed_db():
             """, row)
 
         # ------------------------------------------------------------------ #
-        # AVAILABILITY — next 14 days (09:00–16:00 hourly, skip Sundays)
+        # AVAILABILITY — 14 days starting 2026-06-15
+        # Slots: 08:00,09:00,10:00,11:00,13:00,14:00,15:00,16:00
+        # Skip Sundays
         # ------------------------------------------------------------------ #
         today = datetime(2026, 6, 15)
-        slots = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00"]
-        for groomer_id in range(1, 7):
+        slots = ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"]
+        for groomer_id in range(1, 9):
             for offset in range(1, 15):
                 day = today + timedelta(days=offset)
                 if day.weekday() == 6:   # skip Sunday
@@ -462,86 +535,225 @@ def seed_db():
                   requests, cut, status, dep, price, fee, earn))
 
         # ------------------------------------------------------------------ #
-        # ALL BOOKINGS
-        # dog IDs:    Max=1,Bella=2,Buddy=3,Nala=4,Mochi=5,Duke=6,Luna=7,
-        #             Teddy=8,Charlie=9,Ruby=10,Zeus=11,Coco=12
-        # owner IDs:  Emma=1,James=2,Mia=3,Carlos=4,Aisha=5,Ryan=6,Lisa=7
-        # groomer IDs: Sarah=1,Marcus=2,Jen=3,Kai=4,Sofia=5,David=6
-        # service IDs as documented above
+        # dog IDs:   Max=1,Bella=2,Buddy=3,Nala=4,Mochi=5,Duke=6,Luna=7,
+        #            Teddy=8,Charlie=9,Ruby=10,Zeus=11,Coco=12,Rosie=13,
+        #            Finn=14,Daisy=15,Cooper=16,Stella=17,Bruno=18
+        # owner IDs: Emma=1,James=2,Mia=3,Carlos=4,Aisha=5,Ryan=6,
+        #            Lisa=7,Marcus=8,Sophie=9,Tom=10,Jennifer=11,Alex=12
+        # groomer IDs: Maya=1,James=2,Priya=3,Marcus=4,Sofia=5,David=6,Aisha=7,Carlos=8
+        # service IDs: Maya(1):1-6, James(2):7-11, Priya(3):12-16,
+        #              Marcus(4):17-21, Sofia(5):22-26, David(6):27-31,
+        #              Aisha(7):32-36, Carlos(8):37-41
         # ------------------------------------------------------------------ #
 
-        # Original 3 bookings (kept)
+        # --- Mandatory bookings ---
         _book("KP-A1001", 1, 1, 1, 2,
               "2026-06-08", "10:00",
-              "Go slow with the dryer, fragrance-free shampoo please",
-              "teddy bear", 85.0)
+              "Fragrance-free shampoo, go slow with dryer",
+              "teddy bear", 90.0)
 
-        _book("KP-A1002", 2, 2, 3, 13,
+        _book("KP-A1002", 2, 2, 5, 23,
               "2026-06-01", "14:00",
-              "Keep topknot area clean",
-              "puppy cut", 70.0)
+              "Keep topknot clean, she likes being talked to",
+              "gentle full groom", 80.0)
 
-        _book("KP-A1003", 2, 3, 3, 14,
+        _book("KP-A1003", 2, 3, 7, 33,
               "2026-06-18", "11:00",
-              "Buddy is still learning to stay still!",
-              "", 45.0, status="confirmed")
+              "Bring extra treats, he's learning to stay still",
+              "", 50.0, status="confirmed")
         conn.execute(
-            "UPDATE availability SET is_booked=1 WHERE groomer_id=3 AND date='2026-06-18' AND time_slot='11:00'"
+            "UPDATE availability SET is_booked=1 WHERE groomer_id=7 AND date='2026-06-18' AND time_slot='11:00'"
         )
 
-        # New B-series bookings (all completed)
-        _book("KP-B2001", 3, 4, 1, 1,
-              "2026-05-15", "10:00", "Nala loves treats — feel free!", "bath & brush", 50.0)
-        _book("KP-B2002", 3, 5, 1, 2,
-              "2026-05-22", "13:00", "Mochi likes music playing", "teddy bear", 85.0)
-        _book("KP-B2003", 6, 10, 1, 3,
-              "2026-06-01", "09:00", "Ruby is excitable — be patient please", "puppy cut", 65.0)
-        _book("KP-B2004", 6, 9, 1, 4,
-              "2026-06-10", "11:00", "Just a nail trim", "", 20.0)
-        _book("KP-B2005", 4, 6, 2, 7,
-              "2026-05-20", "14:00", "Duke needs time to settle — go slow", "full groom", 80.0)
-        _book("KP-B2006", 3, 4, 2, 9,
-              "2026-06-03", "10:00", "Nala is very cooperative", "bath & dry", 55.0)
-        _book("KP-B2007", 7, 11, 2, 7,
-              "2026-06-10", "13:00", "Zeus loves treats", "full groom", 80.0)
-        _book("KP-B2008", 5, 8, 3, 11,
-              "2026-05-18", "09:00", "Teddy is a senior — keep it calm", "senior spa", 65.0)
-        _book("KP-B2009", 7, 12, 3, 11,
-              "2026-06-05", "10:00", "Coco has arthritis — handle very gently", "senior spa", 65.0)
-        _book("KP-B2010", 5, 7, 3, 12,
-              "2026-05-25", "13:00", "Do not shave — deshed only", "deshed", 75.0)
-        _book("KP-B2011", 1, 1, 4, 16,
-              "2026-04-15", "09:00", "Max is anxious — go slow", "bath & brush", 45.0)
-        _book("KP-B2012", 4, 6, 4, 17,
-              "2026-05-10", "14:00", "Duke needs time to warm up", "full groom", 75.0)
-        _book("KP-B2013", 3, 5, 5, 22,
-              "2026-05-28", "11:00", "Mochi does great — treat freely", "bath & style", 55.0)
-        _book("KP-B2014", 7, 12, 5, 22,
-              "2026-06-08", "10:00", "Coco is arthritic — very gentle please", "bath & style", 55.0)
-        _book("KP-B2015", 4, 6, 6, 26,
-              "2026-05-12", "10:00", "Duke needs time to warm up to strangers", "full groom", 85.0)
-        _book("KP-B2016", 3, 4, 6, 26,
-              "2026-06-02", "13:00", "Nala is treat-motivated and cooperative", "full groom", 85.0)
-        _book("KP-B2017", 7, 11, 4, 17,
-              "2026-06-11", "09:00", "Zeus is very easygoing", "full groom", 75.0)
-        _book("KP-B2018", 2, 2, 5, 22,
-              "2026-06-12", "11:00", "Keep topknot area clean", "bath & style", 55.0)
-        _book("KP-B2019", 5, 7, 4, 19,
-              "2026-06-09", "10:00", "Do NOT shave Luna — deshed only", "deshed", 60.0)
+        # --- Completed bookings (B-series, going back to 2026-03-01) ---
 
-        # C-series: upcoming confirmed bookings
+        # Maya (groomer 1)
+        _book("KP-B2001", 1, 1, 1, 1,
+              "2026-03-10", "09:00",
+              "Fragrance-free shampoo, go slow with dryer",
+              "bath & dry", 55.0)
+        _book("KP-B2002", 3, 5, 1, 2,
+              "2026-03-20", "13:00",
+              "Mochi loves the dryer, she's very cooperative",
+              "teddy bear", 90.0)
+        _book("KP-B2003", 6, 10, 1, 3,
+              "2026-04-05", "10:00",
+              "First few grooms — lots of treats and breaks",
+              "puppy cut", 70.0)
+        _book("KP-B2004", 1, 1, 1, 6,
+              "2026-04-22", "11:00",
+              "Fragrance-free shampoo, go slow with dryer",
+              "lamb cut", 100.0)
+        _book("KP-B2005", 3, 5, 1, 4,
+              "2026-05-08", "14:00",
+              "Just a nail trim",
+              "", 25.0)
+        _book("KP-B2006", 6, 9, 1, 2,
+              "2026-05-25", "10:00",
+              "Barks at clippers initially but settles",
+              "teddy bear", 90.0)
+
+        # James Rivera (groomer 2)
+        _book("KP-B2007", 4, 6, 2, 9,
+              "2026-03-15", "13:00",
+              "Let him sniff you first, doesn't like face handling initially",
+              "full groom", 85.0)
+        _book("KP-B2008", 9, 14, 2, 9,
+              "2026-03-28", "10:00",
+              "Finn is big but gentle. Needs patience settling in.",
+              "full groom", 85.0)
+        _book("KP-B2009", 3, 4, 2, 10,
+              "2026-04-12", "14:00",
+              "Check ears gently, she had an infection last year",
+              "bath & brush out", 60.0)
+        _book("KP-B2010", 2, 2, 2, 7,
+              "2026-05-05", "11:00",
+              "Keep topknot clean",
+              "show groom", 135.0)
+        _book("KP-B2011", 4, 6, 2, 11,
+              "2026-05-18", "09:00",
+              "Let him sniff you first",
+              "nail & ear clean", 35.0)
+
+        # Priya (groomer 3)
+        _book("KP-B2012", 2, 2, 3, 12,
+              "2026-03-08", "11:00",
+              "Keep topknot clean, she likes being talked to",
+              "signature spa", 110.0)
+        _book("KP-B2013", 10, 15, 3, 16,
+              "2026-03-22", "14:00",
+              "Go slowly on paw handling",
+              "full scissor groom", 125.0)
+        _book("KP-B2014", 3, 5, 3, 13,
+              "2026-04-18", "10:00",
+              "Mochi is very cooperative",
+              "bath & style", 65.0)
+        _book("KP-B2015", 7, 12, 3, 15,
+              "2026-05-02", "09:00",
+              "She is 10 and arthritic. Short sessions.",
+              "nail & ear care", 30.0)
+        _book("KP-B2016", 10, 15, 3, 12,
+              "2026-05-30", "13:00",
+              "Go slowly on paw handling — she's getting better with training",
+              "signature spa", 110.0)
+
+        # Marcus Johnson (groomer 4)
+        _book("KP-B2017", 5, 7, 4, 18,
+              "2026-03-05", "10:00",
+              "She blows coat twice a year, needs full deshed. Do NOT shave.",
+              "deshed & bath", 80.0)
+        _book("KP-B2018", 4, 6, 4, 19,
+              "2026-04-01", "13:00",
+              "Let him sniff you first. Doesn't like face handling initially.",
+              "full groom", 75.0)
+        _book("KP-B2019", 11, 16, 4, 21,
+              "2026-04-20", "09:00",
+              "High energy, keep him moving",
+              "breed trim", 85.0)
+        _book("KP-B2020", 5, 7, 4, 18,
+              "2026-05-15", "10:00",
+              "Do NOT shave — deshed only",
+              "deshed & bath", 80.0)
+        _book("KP-B2021", 4, 18, 4, 19,
+              "2026-06-03", "13:00",
+              "He's strong so secure the table. Very friendly though!",
+              "full groom", 75.0)
+
+        # Sofia Klein (groomer 5)
+        _book("KP-B2022", 5, 8, 5, 22,
+              "2026-03-12", "11:00",
+              "Needs anti-fatigue mat. Hip joints are stiff.",
+              "senior dog spa", 70.0)
+        _book("KP-B2023", 7, 12, 5, 22,
+              "2026-03-26", "10:00",
+              "She is 10 and arthritic. Short sessions, she gets tired quickly.",
+              "senior dog spa", 70.0)
+        _book("KP-B2024", 2, 2, 5, 23,
+              "2026-04-14", "14:00",
+              "Keep topknot clean, she likes being talked to",
+              "gentle full groom", 80.0)
+        _book("KP-B2025", 5, 8, 5, 22,
+              "2026-05-10", "09:00",
+              "Needs anti-fatigue mat. Hip very stiff lately.",
+              "senior dog spa", 70.0)
+
+        # David Park (groomer 6)
+        _book("KP-B2026", 6, 9, 6, 28,
+              "2026-03-18", "10:00",
+              "Barks at clippers initially",
+              "full groom", 95.0)
+        _book("KP-B2027", 3, 5, 6, 27,
+              "2026-04-08", "14:00",
+              "Mochi is very cooperative",
+              "competition prep", 145.0)
+        _book("KP-B2028", 6, 9, 6, 31,
+              "2026-05-20", "11:00",
+              "Keep traditional schnauzer look — beard full",
+              "breed trim", 110.0)
+
+        # Aisha Williams (groomer 7)
+        _book("KP-B2029", 8, 13, 7, 34,
+              "2026-03-25", "10:00",
+              "Rosie is wiggly but good-natured",
+              "full groom", 80.0)
+        _book("KP-B2030", 12, 17, 7, 32,
+              "2026-04-10", "13:00",
+              "Clean skin folds carefully. Sensitive skin — no harsh products.",
+              "puppy first groom", 65.0)
+        _book("KP-B2031", 8, 13, 7, 33,
+              "2026-05-05", "10:00",
+              "Playful and wiggly, treat-motivated",
+              "bath & tidy", 50.0)
+        _book("KP-B2032", 1, 1, 7, 34,
+              "2026-05-28", "14:00",
+              "Go slow with the dryer, anxious dog",
+              "full groom", 80.0)
+
+        # Carlos Mendez (groomer 8)
+        _book("KP-B2033", 4, 18, 8, 41,
+              "2026-03-30", "09:00",
+              "He's strong so secure the table. Very friendly though!",
+              "large breed groom", 85.0)
+        _book("KP-B2034", 4, 6, 8, 39,
+              "2026-04-25", "10:00",
+              "Let him sniff you first",
+              "deshed & bath", 70.0)
+        _book("KP-B2035", 11, 16, 8, 41,
+              "2026-05-22", "13:00",
+              "High energy Australian Shepherd",
+              "large breed groom", 85.0)
+
+        # --- Upcoming confirmed bookings (C-series) ---
         _book("KP-C3001", 6, 9, 1, 2,
-              "2026-06-19", "10:00", "Keep the beard full, traditional schnauzer look",
-              "teddy bear", 85.0, status="confirmed")
+              "2026-06-19", "10:00",
+              "Keep the beard full, traditional schnauzer look",
+              "teddy bear", 90.0, status="confirmed")
         conn.execute(
             "UPDATE availability SET is_booked=1 WHERE groomer_id=1 AND date='2026-06-19' AND time_slot='10:00'"
         )
 
-        _book("KP-C3002", 3, 4, 2, 7,
-              "2026-06-20", "14:00", "Nala loves treats — feel free to use them",
-              "full groom", 80.0, status="confirmed")
+        _book("KP-C3002", 9, 14, 2, 9,
+              "2026-06-20", "14:00",
+              "Finn is big but gentle. Needs patience settling in.",
+              "full groom", 85.0, status="confirmed")
         conn.execute(
             "UPDATE availability SET is_booked=1 WHERE groomer_id=2 AND date='2026-06-20' AND time_slot='14:00'"
+        )
+
+        _book("KP-C3003", 5, 7, 4, 18,
+              "2026-06-22", "09:00",
+              "Do NOT shave — deshed only. Summer peak shedding.",
+              "deshed & bath", 80.0, status="confirmed")
+        conn.execute(
+            "UPDATE availability SET is_booked=1 WHERE groomer_id=4 AND date='2026-06-22' AND time_slot='09:00'"
+        )
+
+        _book("KP-C3004", 7, 12, 5, 22,
+              "2026-06-23", "11:00",
+              "She is 10 and arthritic. Short sessions.",
+              "senior dog spa", 70.0, status="confirmed")
+        conn.execute(
+            "UPDATE availability SET is_booked=1 WHERE groomer_id=5 AND date='2026-06-23' AND time_slot='11:00'"
         )
 
         # ------------------------------------------------------------------ #
@@ -554,148 +766,273 @@ def seed_db():
             ("KP-A1001", 1, 1,
              "excellent — dense curls, no matting", "healthy, no irritation", "clean", "good length", "clear",
              "",
-             "Max did great once I used a diffuser on the dryer. Took a couple of short breaks. Beautiful teddy bear. "
-             "Coat is in excellent shape — clearly being brushed at home.",
+             "Max did great once I used a diffuser on the dryer. Took a couple of short breaks. "
+             "Beautiful teddy bear. Coat is in excellent shape — clearly being brushed at home.",
              "2026-07-20", "2026-06-08 11:30:00"),
 
-            ("KP-A1002", 2, 3,
-             "healthy, medium length", "slightly dry around muzzle", "clean", "slightly long", "mild tear staining",
+            ("KP-A1002", 2, 5,
+             "healthy, medium length, good texture", "slightly dry around muzzle", "clean", "slightly long", "mild tear staining",
              "Mild tear staining around inner corners — worth monitoring.",
-             "Bella was an absolute angel. Recommend moisturizing shampoo next visit. "
-             "Nail trim included — they were just starting to curl.",
+             "Bella was an absolute angel. Kept topknot pristine as requested. "
+             "Recommend moisturizing shampoo next visit. Nails were just starting to curl.",
              "2026-07-13", "2026-06-01 15:30:00"),
 
-            ("KP-B2001", 4, 1,
-             "healthy medium coat, light seasonal shed", "normal", "clean", "good", "clear",
-             "",
-             "Nala was a dream — stood perfectly still the whole time. Treat rewards worked great. "
-             "Very cooperative Golden. Some light shedding but nothing unusual for the season.",
-             "2026-06-26", "2026-05-15 11:00:00"),
+            ("KP-B2001", 1, 1,
+             "dense curls, light tangles at chest", "healthy", "clean", "good", "clear",
+             "Light tangles at chest and armpits — recommend daily brushing there.",
+             "Max was nervous with the dryer as expected. Used lowest setting and took breaks. "
+             "Chest area had some tangles — flagged for owner. Coat otherwise very healthy.",
+             "2026-04-21", "2026-03-10 10:00:00"),
 
             ("KP-B2002", 5, 1,
              "excellent curly coat, no matting", "healthy", "clean, slight wax", "good", "clear",
              "Slight ear wax buildup — recommend ear cleaning at next visit.",
-             "Mochi was spirited but handled everything well. Music definitely helped — she visibly relaxed. "
-             "Teddy bear came out adorable. Flag ear wax for owner.",
-             "2026-06-26", "2026-05-22 14:15:00"),
+             "Mochi was spirited but handled everything perfectly. She loved the dryer! "
+             "Teddy bear came out adorable. Minor ear wax noted — will flag for owner.",
+             "2026-05-01", "2026-03-20 14:15:00"),
 
             ("KP-B2003", 10, 1,
-             "wavy, puppy coat — some tangles at ears", "healthy", "clean", "good", "clear",
-             "Mild ear tangles — recommend more frequent brushing around ear folds.",
-             "Ruby was wiggly but so sweet! Took three short breaks and she settled each time. "
+             "wavy puppy coat, some tangles at ears", "healthy", "clean", "good", "clear",
+             "Ear area tangles — recommend daily brushing around ear folds.",
+             "Ruby was wiggly and mouthy but so sweet. Took four short breaks and used lots of treats. "
              "Puppy first groom was a success. Owner should brush ears daily.",
-             "2026-07-06", "2026-06-01 10:15:00"),
+             "2026-05-16", "2026-04-05 11:00:00"),
 
-            ("KP-B2004", 9, 1,
-             "n/a — nail trim only", "n/a", "n/a", "nails were long, now trimmed", "n/a",
-             "Nails were getting quite long — recommend 6-week nail schedule.",
-             "Quick and easy nail trim. Charlie was cooperative. Recommend sticking to 6-week intervals.",
-             "2026-07-22", "2026-06-10 11:20:00"),
+            ("KP-B2004", 1, 1,
+             "excellent curly coat", "healthy", "clean", "good", "clear",
+             "",
+             "Max was calmer today than last time — building trust! Lamb cut came out beautifully. "
+             "Coat in great shape. Anxious-dog handling protocol is working well.",
+             "2026-06-03", "2026-04-22 12:30:00"),
 
-            ("KP-B2005", 6, 2,
+            ("KP-B2005", 9, 1,
+             "n/a — nail trim only", "n/a", "n/a", "nails trimmed, were slightly long", "n/a",
+             "Nails were getting long — recommend 6-week nail schedule.",
+             "Quick nail trim. Charlie barked at the sound initially but settled fast. Very cooperative.",
+             "2026-06-19", "2026-05-08 14:20:00"),
+
+            ("KP-B2006", 9, 1,
+             "wiry, good condition, some wispy overgrowth", "healthy", "clean", "good", "clear",
+             "",
+             "Charlie was great today — minimal barking at clippers compared to last time. "
+             "Traditional schnauzer look came out sharp. Building a good routine with him.",
+             "2026-07-06", "2026-05-25 11:00:00"),
+
+            ("KP-B2007", 6, 2,
              "healthy double coat, moderate shed", "normal", "clean", "slightly long", "clear",
              "Nails on the longer side — owner should book nail trim soon.",
              "Duke took about 10 minutes to settle but was cooperative once he relaxed. "
              "Good coat condition overall. Noted slightly long nails — mentioned to owner.",
-             "2026-07-01", "2026-05-20 16:00:00"),
+             "2026-04-26", "2026-03-15 14:30:00"),
 
-            ("KP-B2006", 4, 2,
-             "healthy, light seasonal shedding", "normal", "clean", "good", "clear",
+            ("KP-B2008", 14, 2,
+             "thick double coat, some matting behind ears", "healthy", "mild redness", "good", "clear",
+             "Mild ear redness — recommend vet check if persists. Matting behind ears worked out gently.",
+             "Finn is a sweetheart but was very nervous coming in. Took time settling. "
+             "Found some matting behind ears and mild ear redness — flagged for owner to monitor.",
+             "2026-05-09", "2026-03-28 11:30:00"),
+
+            ("KP-B2009", 4, 2,
+             "healthy medium coat, light seasonal shed", "normal", "clean", "good", "clear",
              "",
-             "Nala is a joy — easy bath and blow-dry. No issues at all. Light seasonal shedding is normal. "
-             "Owner's consistent grooming routine is clearly working.",
-             "2026-07-15", "2026-06-03 11:00:00"),
+             "Nala was a dream — cooperative and treat-motivated throughout. "
+             "Light seasonal shedding is completely normal. Easy bath and brush-out.",
+             "2026-05-24", "2026-04-12 15:00:00"),
 
-            ("KP-B2007", 11, 2,
-             "healthy short coat, minimal shedding", "normal", "clean", "good", "clear",
+            ("KP-B2010", 2, 2,
+             "long coat, excellent condition, slight wave at ears", "normal", "clean", "good", "mild tear staining",
+             "Mild tear staining — mention blueberry facial option to owner.",
+             "Bella's show groom came out beautifully. She was patient and loved being talked to. "
+             "Tear staining noted — will mention spa add-on to owner at pickup.",
+             "2026-06-16", "2026-05-05 12:30:00"),
+
+            ("KP-B2011", 6, 2,
+             "n/a — nail & ear only", "n/a", "clean", "nails trimmed", "n/a",
              "",
-             "Zeus was perfect — treat-motivated and completely cooperative. One of the easiest Labs I've groomed. "
-             "Short coat in great condition. No concerns.",
-             "2026-07-22", "2026-06-10 14:30:00"),
+             "Quick nail and ear clean. Duke was more relaxed than his full groom — familiar now. "
+             "Ears clean. Nails done. Easy appointment.",
+             "2026-06-29", "2026-05-18 09:30:00"),
 
-            ("KP-B2008", 8, 3,
-             "curly, slight felting behind ears", "normal for age, mild dryness", "clean", "good", "mild tear staining",
-             "Mild felting behind ears — owner should check and brush weekly. Mild tear staining typical for senior Bichons.",
-             "Teddy is such a sweet senior. Went very slowly — he appreciated it. "
-             "Found slight felting behind ears. Gently worked it out. Recommend weekly ear-area brushing.",
-             "2026-06-29", "2026-05-18 10:30:00"),
+            ("KP-B2012", 2, 3,
+             "long silky coat, slight tangles at belly", "normal", "clean", "good", "mild tear staining",
+             "Belly tangles from collar friction — recommend wider collar or daily belly brushing.",
+             "Bella was wonderful — chatted to her throughout and she loved it. "
+             "Belly tangles from collar noted. Tear staining mild but persistent — recommended facial add-on.",
+             "2026-04-19", "2026-03-08 12:30:00"),
 
-            ("KP-B2009", 12, 3,
-             "long silky coat, some matting at hips", "thin coat typical of age", "clean", "slightly long", "clear",
-             "Hip area matting from lying down. Arthritic — handled with extreme care. Nails slightly long.",
-             "Coco was incredibly patient. Used extra padding on the table. Gently worked out hip matting. "
-             "She needs more frequent grooming to prevent mat buildup given her arthritis limits at-home brushing.",
-             "2026-07-17", "2026-06-05 11:15:00"),
+            ("KP-B2013", 15, 3,
+             "long silky coat, healthy", "normal", "clean", "slightly long", "clear",
+             "Nails slightly long. Paw handling took patience but she eventually cooperated.",
+             "Daisy was sassy about her paws but I took it very slowly with breaks and treats. "
+             "Full scissor groom came out beautifully — she's a stunning Yorkie. "
+             "Nails trimmed with care. Owner is doing great work with paw desensitization.",
+             "2026-05-03", "2026-03-22 15:30:00"),
 
-            ("KP-B2010", 7, 3,
+            ("KP-B2014", 5, 3,
+             "excellent curly coat, no matting", "healthy", "clean", "good", "clear",
+             "",
+             "Mochi was a total joy — cooperative, loved the dryer, loved the attention. "
+             "Bath and style came out clean and polished. No concerns at all.",
+             "2026-05-30", "2026-04-18 11:00:00"),
+
+            ("KP-B2015", 12, 3,
+             "n/a — nail & ear only", "n/a", "clean", "nails trimmed — overgrown", "n/a",
+             "Nails were overgrown — arthritic dogs often resist nail trims so they get neglected. "
+             "Recommend monthly nail appointments to stay on top of it.",
+             "Coco was patient and cooperative considering her arthritis. "
+             "Nails were quite long — mentioned to owner that monthly trims will help her comfort walking.",
+             "2026-06-13", "2026-05-02 09:30:00"),
+
+            ("KP-B2016", 15, 3,
+             "long silky coat, beautiful condition", "normal", "clean", "good", "clear",
+             "",
+             "Daisy was much better with paw handling this visit! Owner's training is paying off. "
+             "Signature spa groom — coat is gleaming. She smells amazing. No concerns.",
+             "2026-07-11", "2026-05-30 14:30:00"),
+
+            ("KP-B2017", 7, 4,
              "thick double coat, heavy seasonal blow", "healthy", "clean", "good", "clear",
              "Peak seasonal shedding — recommend deshed every 6 weeks through summer.",
-             "Luna had SO much coat to come out! High-velocity dryer did most of the work. "
-             "She's healthy and energetic — great double coat underneath. Did not clip — deshed only as requested.",
-             "2026-07-06", "2026-05-25 14:45:00"),
+             "Luna had an enormous amount of coat to come out. High-velocity dryer was essential. "
+             "She's energetic and hates standing still but managed well with breaks. "
+             "Did not clip — deshed only as requested. Owner will notice a huge difference.",
+             "2026-04-16", "2026-03-05 11:30:00"),
 
-            ("KP-B2011", 1, 4,
-             "curly, light tangles at legs", "normal", "clean", "good", "clear",
-             "Light leg tangles — recommend owner brush legs 2x weekly.",
-             "Max was anxious at first but warmed up well. Went slow with the dryer as noted. "
-             "Good bath and brush. Coat is healthy. Leg tangles noted — mentioned to owner.",
-             "2026-05-27", "2026-04-15 10:30:00"),
-
-            ("KP-B2012", 6, 4,
+            ("KP-B2018", 6, 4,
              "healthy double coat, moderate shedding", "normal", "clean", "good", "clear",
              "",
-             "Duke took a while to warm up but was fine once settled. Good groom. "
-             "Double coat in healthy condition. Owner mentioned he's better with familiar groomers — building trust.",
-             "2026-06-21", "2026-05-10 15:30:00"),
+             "Duke took a while to warm up but was cooperative once he relaxed. "
+             "Full groom looks clean and even. Building trust with each visit.",
+             "2026-05-13", "2026-04-01 14:30:00"),
 
-            ("KP-B2013", 5, 5,
-             "excellent curly coat, no matting", "healthy", "clean, slight wax", "good", "clear",
-             "Minor ear wax — recommend ear cleaning add-on at next visit.",
-             "Mochi was so fun! Played music and she loved it. Lovely little Poodle. "
-             "Coat is in great shape. Minor ear wax noted — will mention to owner.",
-             "2026-07-09", "2026-05-28 12:15:00"),
+            ("KP-B2019", 16, 4,
+             "thick double coat, some matting at flanks", "healthy", "clean", "good", "clear",
+             "Flank matting found — recommend more frequent brushing or more regular grooming appointments.",
+             "Cooper was bouncy and smart — needed to be kept mentally engaged. "
+             "Found some flank matting, worked it out carefully. Breed trim came out sharp. "
+             "Owner should increase brushing frequency for this coat type.",
+             "2026-06-01", "2026-04-20 10:30:00"),
 
-            ("KP-B2014", 12, 5,
-             "silky, some hip matting from lying", "thin, age-appropriate", "clean", "slightly long", "clear",
-             "Arthritic — used foam support pad. Hip matting recurrence — owner needs daily brushing routine.",
-             "Sweet little Coco. Used the foam mat so she could lie down comfortably. "
-             "Worked slowly and gently. Hip mats are recurring — I've recommended a daily brushing routine to the owner.",
-             "2026-07-20", "2026-06-08 11:00:00"),
+            ("KP-B2020", 7, 4,
+             "thick double coat, summer peak shedding", "healthy", "clean", "good", "clear",
+             "Summer peak blow — recommend deshed every 5-6 weeks through August.",
+             "Luna again with massive summer shedding! She hates standing still but we got through it. "
+             "High-velocity dryer removed an incredible amount of undercoat. Coat looks so much lighter. "
+             "Did not clip as per owner request.",
+             "2026-06-26", "2026-05-15 11:30:00"),
 
-            ("KP-B2015", 6, 6,
-             "healthy double coat, light shedding", "normal", "clean", "good", "clear",
+            ("KP-B2021", 18, 4,
+             "short smooth coat, healthy", "normal", "clean", "good", "clear",
              "",
-             "Duke was cautious but professional handling won him over by the end. "
-             "Breed-standard trim looks excellent. Owner was thrilled with the result.",
-             "2026-06-23", "2026-05-12 11:30:00"),
+             "Bruno was strong and wiggly but totally friendly — exactly as owner described. "
+             "Secured the table as requested. Full groom easy on short coat. No concerns.",
+             "2026-07-15", "2026-06-03 14:30:00"),
 
-            ("KP-B2016", 4, 6,
-             "healthy medium coat, seasonal shed", "normal", "clean", "good", "clear",
+            ("KP-B2022", 8, 5,
+             "curly coat, slight felting behind ears", "normal for age, mild dryness", "clean", "good", "mild tear staining",
+             "Felting behind ears — owner should check and brush weekly. Tear staining mild but typical for senior Bichons.",
+             "Teddy is such a sweet senior. Went very slowly with extra breaks and warm water for the rinse. "
+             "Found felting behind ears — gently worked it out. Used anti-fatigue mat throughout. "
+             "He was comfortable and calm by the end.",
+             "2026-04-23", "2026-03-12 12:30:00"),
+
+            ("KP-B2023", 12, 5,
+             "long silky coat, hip area matting", "thin coat typical of age", "clean", "slightly long", "clear",
+             "Hip area matting from lying down. Arthritic — handled with extreme care. Nails slightly long.",
+             "Coco was incredibly patient. Used foam mat and let her lie down when needed. "
+             "Gently worked out hip matting — she needs more frequent grooming to prevent recurrence "
+             "since arthritis limits at-home brushing. Mentioned daily gentle brushing to owner.",
+             "2026-05-07", "2026-03-26 11:30:00"),
+
+            ("KP-B2024", 2, 5,
+             "healthy long coat, clean texture", "normal", "clean", "good", "mild tear staining",
+             "Mild tear staining — blueberry facial would help, recommend as add-on.",
+             "Bella was lovely — patient and cooperative. Kept topknot area pristine as always. "
+             "Tear staining continuing — reminded owner about facial add-on. Easy, pleasant groom.",
+             "2026-05-26", "2026-04-14 15:30:00"),
+
+            ("KP-B2025", 8, 5,
+             "curly coat, good condition", "normal, age-appropriate dryness", "clean", "good", "clear",
+             "Hip stiffness more noticeable than last visit — owner should mention to vet.",
+             "Teddy was more stiff than usual today. Lots of breaks, anti-fatigue mat the whole time. "
+             "He was relaxed but tired quickly. Hip stiffness worth flagging to the vet. Sweet senior boy.",
+             "2026-06-21", "2026-05-10 10:30:00"),
+
+            ("KP-B2026", 9, 6,
+             "wiry coat, good texture", "healthy", "clean", "good", "clear",
              "",
-             "Nala is an ideal client — cooperative, treat-motivated, and calm. "
-             "Breed-standard trim came out great. Light seasonal shedding, nothing concerning.",
-             "2026-07-14", "2026-06-02 14:30:00"),
+             "Charlie was alert and initially barked at the clippers but settled. "
+             "Full groom with traditional schnauzer look — beard and brows looking sharp. "
+             "David's precision work is well-suited for this breed.",
+             "2026-04-29", "2026-03-18 11:30:00"),
 
-            ("KP-B2017", 11, 4,
-             "healthy short coat", "normal", "clean", "good", "clear",
+            ("KP-B2027", 5, 6,
+             "excellent curly coat, no matting", "healthy", "clean", "good", "clear",
              "",
-             "Zeus was an absolute gentleman. Treat-motivated and completely relaxed. "
-             "One of the easiest grooms I've done. Short coat in perfect condition.",
-             "2026-07-23", "2026-06-11 10:00:00"),
+             "Mochi was an absolute dream for competition prep. Cooperative, patient, and clearly "
+             "well-socialized. The topknot geometry came out perfectly. Miniature Poodle precision work.",
+             "2026-05-19", "2026-04-08 16:00:00"),
 
-            ("KP-B2018", 2, 5,
-             "healthy, medium length, soft texture", "normal", "clean", "good", "mild tear staining",
-             "Mild tear staining — recommend blueberry facial add-on next visit.",
-             "Bella was very sweet and patient. Classic Shih Tzu tear staining — flagged for owner. "
-             "Coat texture is lovely. Topknot area kept clean as requested.",
-             "2026-07-24", "2026-06-12 12:15:00"),
+            ("KP-B2028", 9, 6,
+             "wiry coat, excellent condition", "healthy", "clean", "good", "clear",
+             "",
+             "Charlie is getting better with each visit — barely barked at clippers today. "
+             "Breed trim looks immaculate. Traditional schnauzer silhouette with full beard as owner wants. "
+             "Consistent grooming schedule is clearly benefiting his coat and temperament.",
+             "2026-07-01", "2026-05-20 12:30:00"),
 
-            ("KP-B2019", 7, 4,
-             "thick double coat, heavy blow — summer peak", "healthy", "clean", "good", "clear",
-             "Peak summer shedding — book deshed every 5-6 weeks through August.",
-             "Luna had a LOT of coat. Deshed treatment really paid off — owner will notice a huge difference. "
-             "Did not clip as requested. High-energy girl but well-behaved on table.",
-             "2026-07-21", "2026-06-09 11:15:00"),
+            ("KP-B2029", 13, 7,
+             "medium coat, healthy", "normal", "clean", "good", "clear",
+             "",
+             "Rosie was playful and wiggly but so good-natured — impossible not to love. "
+             "Full groom came out clean and polished. Coat has a lovely natural sheen. No concerns.",
+             "2026-05-06", "2026-03-25 11:30:00"),
+
+            ("KP-B2030", 17, 7,
+             "short smooth coat, skin folds checked", "mild redness in one facial fold", "clean", "good", "clear",
+             "Mild redness in one facial fold — recommend vet check and regular fold cleaning at home.",
+             "Stella was calm and cooperative — great with handling. Checked all skin folds carefully "
+             "as requested with gentle, fragrance-free products. Found mild redness in one facial fold — "
+             "flagged for owner. Puppy first groom went really well.",
+             "2026-05-21", "2026-04-10 14:30:00"),
+
+            ("KP-B2031", 13, 7,
+             "medium coat, healthy with light shedding", "normal", "clean", "good", "clear",
+             "",
+             "Rosie was great as always — wiggly and sweet. Bath and tidy quick and easy. "
+             "Light seasonal shedding normal for this coat type. No concerns.",
+             "2026-06-16", "2026-05-05 11:30:00"),
+
+            ("KP-B2032", 1, 7,
+             "curly coat, some tangles at armpits", "healthy", "clean", "good", "clear",
+             "Armpit tangles recurring — daily brushing in that area essential.",
+             "Max was anxious with the dryer but Aisha's positive reinforcement approach helped a lot. "
+             "Lots of treats and breaks. Armpit tangles again — recommended daily brushing to owner. "
+             "Coat otherwise healthy. Full groom came out well.",
+             "2026-07-09", "2026-05-28 15:30:00"),
+
+            ("KP-B2033", 18, 8,
+             "short smooth coat, healthy", "normal", "clean", "good", "clear",
+             "",
+             "Bruno is strong — secured the table as owner said. Very friendly and wiggly though! "
+             "Large breed groom easy on his short coat. In and out efficiently. No concerns.",
+             "2026-05-11", "2026-03-30 10:30:00"),
+
+            ("KP-B2034", 6, 8,
+             "healthy double coat, heavy shedding", "normal", "clean", "good", "clear",
+             "Heavy seasonal shedding — recommend deshed every 6 weeks.",
+             "Duke was cautious at first but settled well — becoming more comfortable with each visit. "
+             "Deshed treatment removed a significant amount of undercoat. Owner will notice less shedding. "
+             "Coat underneath is healthy and dense.",
+             "2026-06-06", "2026-04-25 11:30:00"),
+
+            ("KP-B2035", 16, 8,
+             "thick double coat, some matting at collar", "healthy", "clean", "good", "clear",
+             "Collar matting found — recommend checking and loosening collar regularly.",
+             "Cooper was high-energy but manageable. Kept him mentally engaged throughout. "
+             "Found collar matting — mentioned to owner. Large breed groom came out well. "
+             "Coat is thick and healthy underneath the shed.",
+             "2026-07-03", "2026-05-22 14:30:00"),
         ]
 
         for rec in groom_records:
@@ -708,11 +1045,9 @@ def seed_db():
             """, rec)
 
         # ------------------------------------------------------------------ #
-        # GROOM PHOTOS (one per completed booking that included a cut/style)
-        # Nail-only and bath-only bookings excluded where noted.
+        # GROOM PHOTOS — one per completed booking with a cut/style
         # photo_url = '' — frontend fetches from dog.ceo
         # ------------------------------------------------------------------ #
-        # Returns inserted photo rowid for use in reviews
         def _photo(booking_id, dog_id, groomer_id, caption, cut_style, is_portfolio=1):
             cur = conn.execute("""
                 INSERT INTO groom_photos
@@ -724,46 +1059,76 @@ def seed_db():
         photo_map = {}  # booking_id -> photo_id (for linking in reviews)
 
         photo_map["KP-A1001"] = _photo("KP-A1001", 1, 1,
-            "Max's teddy bear cut — June 8", "teddy bear")
-        photo_map["KP-A1002"] = _photo("KP-A1002", 2, 3,
-            "Bella's puppy cut — June 1", "puppy cut")
-        photo_map["KP-B2001"] = _photo("KP-B2001", 4, 1,
-            "Nala after her bath & brush — May 15", "bath & brush")
+            "Max's teddy bear groom — June 8, Upper West Side", "teddy bear")
+        photo_map["KP-A1002"] = _photo("KP-A1002", 2, 5,
+            "Bella's gentle full groom — June 1, West Village", "gentle full groom")
+        photo_map["KP-B2001"] = _photo("KP-B2001", 1, 1,
+            "Max's bath & dry — March 10", "bath & dry")
         photo_map["KP-B2002"] = _photo("KP-B2002", 5, 1,
-            "Mochi's teddy bear full groom — May 22", "teddy bear")
+            "Mochi's teddy bear full groom — March 20", "teddy bear")
         photo_map["KP-B2003"] = _photo("KP-B2003", 10, 1,
-            "Ruby's first puppy groom — June 1", "puppy cut")
-        # KP-B2004 is nail-only — no photo
-        photo_map["KP-B2005"] = _photo("KP-B2005", 6, 2,
-            "Duke's full groom — May 20", "full groom")
-        photo_map["KP-B2006"] = _photo("KP-B2006", 4, 2,
-            "Nala's bath & dry — June 3", "bath & dry")
-        photo_map["KP-B2007"] = _photo("KP-B2007", 11, 2,
-            "Zeus's full groom — June 10", "full groom")
-        photo_map["KP-B2008"] = _photo("KP-B2008", 8, 3,
-            "Teddy's senior spa groom — May 18", "senior spa")
-        photo_map["KP-B2009"] = _photo("KP-B2009", 12, 3,
-            "Coco's senior spa groom — June 5", "senior spa")
-        photo_map["KP-B2010"] = _photo("KP-B2010", 7, 3,
-            "Luna's deshed treatment — May 25", "deshed")
-        photo_map["KP-B2011"] = _photo("KP-B2011", 1, 4,
-            "Max's bath & brush — April 15", "bath & brush")
-        photo_map["KP-B2012"] = _photo("KP-B2012", 6, 4,
-            "Duke's full groom — May 10", "full groom")
-        photo_map["KP-B2013"] = _photo("KP-B2013", 5, 5,
-            "Mochi's bath & style — May 28", "bath & style")
-        photo_map["KP-B2014"] = _photo("KP-B2014", 12, 5,
-            "Coco's bath & style — June 8", "bath & style")
-        photo_map["KP-B2015"] = _photo("KP-B2015", 6, 6,
-            "Duke's breed-standard full groom — May 12", "full groom")
-        photo_map["KP-B2016"] = _photo("KP-B2016", 4, 6,
-            "Nala's full groom — June 2", "full groom")
-        photo_map["KP-B2017"] = _photo("KP-B2017", 11, 4,
-            "Zeus's full groom — June 11", "full groom")
-        photo_map["KP-B2018"] = _photo("KP-B2018", 2, 5,
-            "Bella's bath & style — June 12", "bath & style")
-        photo_map["KP-B2019"] = _photo("KP-B2019", 7, 4,
-            "Luna's deshed treatment — June 9", "deshed")
+            "Ruby's puppy first groom — April 5", "puppy cut")
+        photo_map["KP-B2004"] = _photo("KP-B2004", 1, 1,
+            "Max's lamb cut — April 22", "lamb cut")
+        # KP-B2005 is nail-only — no photo
+        photo_map["KP-B2006"] = _photo("KP-B2006", 9, 1,
+            "Charlie's teddy bear groom — May 25", "teddy bear")
+        photo_map["KP-B2007"] = _photo("KP-B2007", 6, 2,
+            "Duke's full groom — March 15, Park Slope", "full groom")
+        photo_map["KP-B2008"] = _photo("KP-B2008", 14, 2,
+            "Finn's full groom — March 28, Park Slope", "full groom")
+        photo_map["KP-B2009"] = _photo("KP-B2009", 4, 2,
+            "Nala's bath & brush out — April 12", "bath & brush out")
+        photo_map["KP-B2010"] = _photo("KP-B2010", 2, 2,
+            "Bella's show groom — May 5, Park Slope", "show groom")
+        # KP-B2011 is nail & ear only — no photo
+        photo_map["KP-B2012"] = _photo("KP-B2012", 2, 3,
+            "Bella's signature spa groom — March 8, Tribeca", "signature spa")
+        photo_map["KP-B2013"] = _photo("KP-B2013", 15, 3,
+            "Daisy's full scissor groom — March 22, Tribeca", "full scissor groom")
+        photo_map["KP-B2014"] = _photo("KP-B2014", 5, 3,
+            "Mochi's bath & style — April 18, Tribeca", "bath & style")
+        # KP-B2015 is nail & ear only — no photo
+        photo_map["KP-B2016"] = _photo("KP-B2016", 15, 3,
+            "Daisy's signature spa groom — May 30, Tribeca", "signature spa")
+        photo_map["KP-B2017"] = _photo("KP-B2017", 7, 4,
+            "Luna's deshed & bath — March 5, Astoria", "deshed & bath")
+        photo_map["KP-B2018"] = _photo("KP-B2018", 6, 4,
+            "Duke's full groom — April 1, Astoria", "full groom")
+        photo_map["KP-B2019"] = _photo("KP-B2019", 16, 4,
+            "Cooper's breed trim — April 20, Astoria", "breed trim")
+        photo_map["KP-B2020"] = _photo("KP-B2020", 7, 4,
+            "Luna's deshed & bath — May 15, Astoria", "deshed & bath")
+        photo_map["KP-B2021"] = _photo("KP-B2021", 18, 4,
+            "Bruno's full groom — June 3, Astoria", "full groom")
+        photo_map["KP-B2022"] = _photo("KP-B2022", 8, 5,
+            "Teddy's senior dog spa — March 12, West Village", "senior dog spa")
+        photo_map["KP-B2023"] = _photo("KP-B2023", 12, 5,
+            "Coco's senior dog spa — March 26, West Village", "senior dog spa")
+        photo_map["KP-B2024"] = _photo("KP-B2024", 2, 5,
+            "Bella's gentle full groom — April 14, West Village", "gentle full groom")
+        photo_map["KP-B2025"] = _photo("KP-B2025", 8, 5,
+            "Teddy's senior dog spa — May 10, West Village", "senior dog spa")
+        photo_map["KP-B2026"] = _photo("KP-B2026", 9, 6,
+            "Charlie's full groom — March 18, Upper East Side", "full groom")
+        photo_map["KP-B2027"] = _photo("KP-B2027", 5, 6,
+            "Mochi's competition prep — April 8, Upper East Side", "competition prep")
+        photo_map["KP-B2028"] = _photo("KP-B2028", 9, 6,
+            "Charlie's breed trim — May 20, Upper East Side", "breed trim")
+        photo_map["KP-B2029"] = _photo("KP-B2029", 13, 7,
+            "Rosie's full groom — March 25, Williamsburg", "full groom")
+        photo_map["KP-B2030"] = _photo("KP-B2030", 17, 7,
+            "Stella's puppy first groom — April 10, Williamsburg", "puppy first groom")
+        photo_map["KP-B2031"] = _photo("KP-B2031", 13, 7,
+            "Rosie's bath & tidy — May 5, Williamsburg", "bath & tidy")
+        photo_map["KP-B2032"] = _photo("KP-B2032", 1, 7,
+            "Max's full groom — May 28, Williamsburg", "full groom")
+        photo_map["KP-B2033"] = _photo("KP-B2033", 18, 8,
+            "Bruno's large breed groom — March 30, Riverdale", "large breed groom")
+        photo_map["KP-B2034"] = _photo("KP-B2034", 6, 8,
+            "Duke's deshed & bath — April 25, Riverdale", "deshed & bath")
+        photo_map["KP-B2035"] = _photo("KP-B2035", 16, 8,
+            "Cooper's large breed groom — May 22, Riverdale", "large breed groom")
 
         # ------------------------------------------------------------------ #
         # REVIEWS for all completed bookings
@@ -771,110 +1136,224 @@ def seed_db():
         reviews = [
             # (booking_id, owner_id, groomer_id, dog_id, photo_id, rating, review_text, cut_style)
             ("KP-A1001", 1, 1, 1, photo_map["KP-A1001"], 5,
-             "Sarah is incredible with Max. He's always been anxious at groomers but she was so patient. "
-             "Took extra time with the dryer and let him set the pace. The teddy bear cut came out perfect. "
-             "Will absolutely be back!", "teddy bear"),
+             "Maya is incredible with Max. He's always been anxious at groomers but she was so patient — "
+             "no cage dryers, one dog at a time, and she let him set the pace with the blow dryer. "
+             "The teddy bear cut is the best he's ever had. Already rebooked.",
+             "teddy bear"),
 
-            ("KP-A1002", 2, 3, 2, photo_map["KP-A1002"], 5,
-             "Jen is so gentle with Bella. She noticed some mild tear staining and flagged it for us — "
-             "that level of care is exactly why we use KindPaw. Bella came home happy and smelling amazing.",
-             "puppy cut"),
+            ("KP-A1002", 2, 5, 2, photo_map["KP-A1002"], 5,
+             "Sofia was so gentle with Bella. She flagged some tear staining and suggested a follow-up — "
+             "that kind of attentiveness is exactly what we love. Bella came home happy and beautiful. "
+             "West Village is the perfect little boutique grooming studio.",
+             "gentle full groom"),
 
-            ("KP-B2001", 3, 1, 4, photo_map["KP-B2001"], 5,
-             "Sarah did a wonderful job with Nala's bath and brush-out. Nala came home gleaming and "
-             "smelling fresh. Sarah even gave her extra treats throughout. Very professional and warm.",
-             "bath & brush"),
+            ("KP-B2001", 1, 1, 1, photo_map["KP-B2001"], 4,
+             "Maya did a great bath and dry for Max on his first visit. He was nervous but she handled it well. "
+             "Used the lowest dryer setting and took breaks. Flagged some chest tangles to brush at home. "
+             "Building trust slowly — will keep coming back.",
+             "bath & dry"),
 
             ("KP-B2002", 3, 1, 5, photo_map["KP-B2002"], 5,
-             "Mochi's teddy bear groom was flawless. Sarah clearly has an eye for doodle cuts — the "
-             "shaping around the face was perfect. Mochi was relaxed the whole time apparently. We're "
-             "booking monthly from now on.", "teddy bear"),
+             "Mochi's teddy bear came out perfect. Maya has such an eye for Poodle cuts. "
+             "Mochi loves the dryer so this was an easy one apparently — she just stood there happily. "
+             "Coat shaping around the face was exactly right. Booking monthly.",
+             "teddy bear"),
 
-            ("KP-B2003", 6, 1, 10, photo_map["KP-B2003"], 4,
-             "Ruby's first groom went really well! She was a wiggle monster but Sarah handled it "
-             "beautifully. Ruby came home looking so grown-up. Took a little longer than expected "
-             "but that was totally fine for a puppy first groom.", "puppy cut"),
+            ("KP-B2003", 6, 1, 10, photo_map["KP-B2003"], 5,
+             "Ruby's first groom ever and Maya made it magical. Lots of treats, four short breaks, "
+             "and zero stress. Ruby came home looking so grown-up and smelling amazing. "
+             "If you have a puppy or an anxious dog, Maya on the Upper West Side is your groomer.",
+             "puppy cut"),
 
-            ("KP-B2004", 6, 1, 9, None, 5,
-             "Quick, easy nail trim for Charlie. Sarah was fast and efficient — in and out in 15 minutes. "
-             "Charlie didn't even flinch. Great for a standalone nail appointment.", ""),
+            ("KP-B2004", 1, 1, 1, photo_map["KP-B2004"], 5,
+             "The lamb cut on Max is stunning — best groom he's ever had. Maya keeps getting better "
+             "with him as he builds trust. He was calmer this visit than ever before. "
+             "The no-cage-dryer policy makes such a difference for anxious dogs.",
+             "lamb cut"),
 
-            ("KP-B2005", 4, 2, 6, photo_map["KP-B2005"], 4,
-             "Marcus did a solid job with Duke. Duke can be standoffish with strangers but Marcus gave "
-             "him time to settle before starting. The groom looks clean and neat. Docked one star only "
-             "because pick-up was a bit rushed, but the work itself was great.", "full groom"),
+            ("KP-B2005", 6, 1, 9, None, 5,
+             "Quick and clean nail trim for Charlie. Maya was fast and efficient — done in under 15 minutes. "
+             "Charlie barely barked. Great for a standalone nail appointment between full grooms.",
+             ""),
 
-            ("KP-B2006", 3, 2, 4, photo_map["KP-B2006"], 5,
-             "Fast, professional bath and blow-dry. Marcus clearly knows what he's doing. Nala came "
-             "back looking pristine. Easy booking experience too.", "bath & dry"),
+            ("KP-B2006", 6, 1, 9, photo_map["KP-B2006"], 5,
+             "Charlie's schnauzer cut looked immaculate. Maya really understands the breed standard. "
+             "His beard is full and his eyebrows are perfectly shaped. Much less fuss with the clippers "
+             "this visit — he's clearly getting comfortable with Maya.",
+             "teddy bear"),
 
-            ("KP-B2007", 7, 2, 11, photo_map["KP-B2007"], 5,
-             "Marcus was fantastic with Zeus. He was in and out efficiently and Zeus looked amazing. "
-             "The full groom was thorough — ears, nails, coat all done. Very impressed.",
+            ("KP-B2007", 4, 2, 6, photo_map["KP-B2007"], 4,
+             "James did a solid job with Duke. Duke is standoffish with strangers but James gave him "
+             "10 minutes to sniff and settle before starting — really appreciated that. "
+             "Groom looks clean and even. Mentioned Duke's nails were getting long too, which was helpful.",
              "full groom"),
 
-            ("KP-B2008", 5, 3, 8, photo_map["KP-B2008"], 5,
-             "Jen is a gem with senior dogs. Teddy is 8 and can be slow — she never rushed him. "
-             "She also spotted some early matting behind his ears and gently worked it out. "
-             "Teddy came home relaxed and looking beautiful.", "senior spa"),
-
-            ("KP-B2009", 7, 3, 12, photo_map["KP-B2009"], 5,
-             "Coco is 10 with arthritis and Jen handled her with such care. She used extra padding "
-             "and let Coco lie down whenever needed. I cried a little picking her up — she looked "
-             "so happy and beautiful. Jen is exactly who you want for a senior dog.", "senior spa"),
-
-            ("KP-B2010", 5, 3, 7, photo_map["KP-B2010"], 4,
-             "Great deshed treatment for Luna. The amount of fur Jen removed was truly unbelievable. "
-             "Coat looks so much lighter and healthier. Only giving 4 stars because we had a slight "
-             "wait at drop-off, but the groom itself was excellent.", "deshed"),
-
-            ("KP-B2011", 1, 4, 1, photo_map["KP-B2011"], 4,
-             "Kai was good with Max though Max was nervous. He used treats frequently which helped. "
-             "The bath and brush were done well. I've since switched Max to Sarah who specializes in "
-             "anxious dogs, but Kai was perfectly kind and capable.", "bath & brush"),
-
-            ("KP-B2012", 4, 4, 6, photo_map["KP-B2012"], 5,
-             "Kai did a great job with Duke. He gave him plenty of time to warm up and Duke actually "
-             "did really well. Full groom looks clean and even. Will bring Duke back to Kai for sure.",
+            ("KP-B2008", 9, 2, 14, photo_map["KP-B2008"], 4,
+             "James was great with Finn but Finn had a rough time settling in. James was very patient. "
+             "He did flag some ear redness which we've since had checked — caught early, good outcome. "
+             "Would book again, just know Finn needs extra time.",
              "full groom"),
 
-            ("KP-B2013", 3, 5, 5, photo_map["KP-B2013"], 5,
-             "Sofia is wonderful! Mochi's bath and style was done with such attention to detail. "
-             "She played music and Mochi was totally relaxed apparently. The finish on the coat was "
-             "beautiful. Already booked our next appointment.", "bath & style"),
+            ("KP-B2009", 3, 2, 4, photo_map["KP-B2009"], 5,
+             "Easy, professional bath and brush-out for Nala. James is efficient and thorough. "
+             "Nala was cooperative as always and came back looking pristine. "
+             "Brooklyn Groom Co. in Park Slope is super convenient.",
+             "bath & brush out"),
 
-            ("KP-B2014", 7, 5, 12, photo_map["KP-B2014"], 5,
-             "Sofia was incredibly gentle with Coco. She used a foam mat so Coco could rest "
-             "comfortably and worked around her arthritic hips with so much care. Coco looked "
-             "beautiful and wasn't stressed at all. Sofia is amazing with senior dogs.",
+            ("KP-B2010", 2, 2, 2, photo_map["KP-B2010"], 5,
+             "Bella's show groom was genuinely impressive. James clearly knows what he's doing "
+             "with Shih Tzus — the coat was perfect and the topknot impeccable. "
+             "He also noticed the tear staining and mentioned a facial add-on, which was thoughtful. "
+             "Best groom Bella has had anywhere.",
+             "show groom"),
+
+            ("KP-B2011", 4, 2, 6, None, 5,
+             "Quick nail and ear clean for Duke. James is familiar with him now and Duke was much more relaxed. "
+             "Fast, professional, and reasonably priced. Easy add-on appointment.",
+             ""),
+
+            ("KP-B2012", 2, 3, 2, photo_map["KP-B2012"], 5,
+             "Tribeca Tails is exactly the boutique experience we wanted for Bella. Priya was wonderful — "
+             "she talked to Bella the whole time and Bella was totally relaxed. The aromatherapy rinse "
+             "was a lovely touch. Noticed belly tangles from the collar and gave great advice.",
+             "signature spa"),
+
+            ("KP-B2013", 10, 3, 15, photo_map["KP-B2013"], 5,
+             "Priya did a beautiful scissor-only groom on Daisy. The precision is incredible — "
+             "she took her time with the paw handling and was patient when Daisy got sassy about it. "
+             "Daisy looked like she'd just come from a show ring. Worth every penny.",
+             "full scissor groom"),
+
+            ("KP-B2014", 3, 3, 5, photo_map["KP-B2014"], 5,
+             "Mochi is an easy client but Priya still went above and beyond. Bath and style was "
+             "polished and precise. Priya clearly loves her work — the attention to detail shows. "
+             "Already booked next appointment.",
              "bath & style"),
 
-            ("KP-B2015", 4, 6, 6, photo_map["KP-B2015"], 5,
-             "David is the real deal. Duke's full groom was precise and professional. "
-             "He also gave Duke the time he needed to settle, which I really appreciate. "
-             "The finish was cleaner than any groom Duke has had before.", "full groom"),
+            ("KP-B2015", 7, 3, 12, None, 5,
+             "Priya was incredibly gentle with Coco for her nail and ear appointment. "
+             "She spotted that the nails were overgrown — not surprising given Coco's arthritis — "
+             "and recommended monthly trims going forward. Very thoughtful care.",
+             ""),
 
-            ("KP-B2016", 3, 6, 4, photo_map["KP-B2016"], 5,
-             "David did a fantastic job with Nala. Professional, efficient, and the result "
-             "was immaculate. Nala was happy and relaxed at pick-up. Highly recommend for "
-             "owners who want precise breed-appropriate grooming.", "full groom"),
+            ("KP-B2016", 10, 3, 15, photo_map["KP-B2016"], 5,
+             "Daisy's second visit to Priya and she was so much better with her paws this time! "
+             "Priya said our training is paying off. The signature spa is gorgeous — "
+             "Daisy smelled incredible for days. Tribeca Tails is our forever groomer.",
+             "signature spa"),
 
-            ("KP-B2017", 7, 4, 11, photo_map["KP-B2017"], 5,
-             "Kai was great with Zeus! Easygoing and professional. Zeus came home looking "
-             "fantastic and very happy. Kai clearly loves big dogs — Zeus took to him immediately. "
-             "Will definitely book again.", "full groom"),
+            ("KP-B2017", 5, 4, 7, photo_map["KP-B2017"], 5,
+             "Marcus at Queens Paws is the best for Huskies. He really understands double coats — "
+             "never suggested shaving and used the high-velocity dryer expertly. "
+             "The amount of undercoat he removed was genuinely shocking. Luna felt so much lighter.",
+             "deshed & bath"),
 
-            ("KP-B2018", 2, 5, 2, photo_map["KP-B2018"], 5,
-             "Sofia did a beautiful job with Bella's bath and style. She flagged some mild tear "
-             "staining and suggested a blueberry facial add-on next time — that kind of "
-             "personalized care is exactly what we love. Bella smelled amazing all week.",
-             "bath & style"),
+            ("KP-B2018", 4, 4, 6, photo_map["KP-B2018"], 4,
+             "Marcus did a good job with Duke. He gave him room to settle which I appreciated. "
+             "Full groom came out clean. Big workspace in Astoria is perfect for large breeds — "
+             "Duke wasn't cramped at all. Will bring him back.",
+             "full groom"),
 
-            ("KP-B2019", 5, 4, 7, photo_map["KP-B2019"], 4,
-             "Kai did a solid deshed on Luna. She shed half her body weight apparently! "
-             "Coat looked so much healthier. He respected our no-clip request. "
-             "Drop-off was a tiny bit chaotic but pick-up was smooth and Luna was happy.",
-             "deshed"),
+            ("KP-B2019", 11, 4, 16, photo_map["KP-B2019"], 4,
+             "Marcus handled Cooper's energy well — kept him engaged and moving. "
+             "Found some flank matting I didn't know about and worked it out. Breed trim looks sharp. "
+             "Astoria is a bit far for us but the quality is worth it.",
+             "breed trim"),
+
+            ("KP-B2020", 5, 4, 7, photo_map["KP-B2020"], 5,
+             "Second deshed for Luna's summer blow and it was just as impressive as the first. "
+             "Marcus never pushes shaving — he gets that Huskies shouldn't be clipped. "
+             "Luna came home looking and feeling so much better. Booking every 6 weeks through summer.",
+             "deshed & bath"),
+
+            ("KP-B2021", 4, 4, 18, photo_map["KP-B2021"], 5,
+             "Marcus handled Bruno like a pro. Bruno is a handful — strong and wiggly — but Marcus "
+             "secured everything properly and Bruno came through fine. Full groom was thorough and "
+             "quick given his short coat. Great value in Astoria.",
+             "full groom"),
+
+            ("KP-B2022", 5, 5, 8, photo_map["KP-B2022"], 5,
+             "Sofia is exactly who you want for a senior dog. Teddy gets stiff and slow and she "
+             "never rushed him for a second. She used an anti-fatigue mat, took breaks, and used "
+             "warm water for the rinse. He came home so relaxed. Found ear felting too — very observant.",
+             "senior dog spa"),
+
+            ("KP-B2023", 7, 5, 12, photo_map["KP-B2023"], 5,
+             "I have taken Coco to many groomers and Sofia at Village Grooming Studio is in a different league. "
+             "She let Coco lie down on a foam mat, worked around her stiff hips, and never once rushed her. "
+             "Coco came home happy and beautiful. This is the groomer for senior dogs in NYC.",
+             "senior dog spa"),
+
+            ("KP-B2024", 2, 5, 2, photo_map["KP-B2024"], 5,
+             "Another beautiful groom from Sofia for Bella. She remembered all the details from before — "
+             "topknot pristine, talked to her throughout. Flagged tear staining again and suggested "
+             "the blueberry facial. Will add it next time. Consistently excellent.",
+             "gentle full groom"),
+
+            ("KP-B2025", 5, 5, 8, photo_map["KP-B2025"], 5,
+             "Sofia noticed Teddy's hip stiffness was worse than before and gently mentioned we should "
+             "bring it up with our vet. That kind of attentiveness from a groomer is rare. "
+             "He came home looking beautiful and she made sure he was comfortable the whole time.",
+             "senior dog spa"),
+
+            ("KP-B2026", 6, 6, 9, photo_map["KP-B2026"], 5,
+             "David at ProGroom NYC is exceptional. Charlie's full groom was precise — "
+             "the schnauzer cut was geometrically perfect. David handled the initial clipper barking "
+             "with calm authority and Charlie settled fast. Upper East Side convenience is a bonus.",
+             "full groom"),
+
+            ("KP-B2027", 3, 6, 5, photo_map["KP-B2027"], 5,
+             "We took Mochi in for competition prep on a whim and the result was incredible. "
+             "David's background as an AKC handler is obvious — the topknot was geometrically perfect. "
+             "Mochi was cooperative and David was meticulous. Worth the premium price.",
+             "competition prep"),
+
+            ("KP-B2028", 6, 6, 9, photo_map["KP-B2028"], 5,
+             "Charlie barely reacted to the clippers this visit. David's consistency is building "
+             "a great relationship with him. The breed trim is always immaculate — traditional schnauzer "
+             "look with a full beard exactly as we want. ProGroom NYC is Charlie's permanent groomer.",
+             "breed trim"),
+
+            ("KP-B2029", 8, 7, 13, photo_map["KP-B2029"], 5,
+             "Aisha was wonderful with Rosie. Rosie is wiggly and full of energy but Aisha handled "
+             "it with patience and humor. Full groom looked beautiful. Williamsburg pickup was super "
+             "convenient. Already booked the next appointment.",
+             "full groom"),
+
+            ("KP-B2030", 12, 7, 17, photo_map["KP-B2030"], 5,
+             "Stella's first groom and Aisha made it such a positive experience. She checked every "
+             "skin fold carefully with fragrance-free products as requested. Found mild redness in one "
+             "fold we didn't know about — that observation was incredibly helpful. Stella loved her.",
+             "puppy first groom"),
+
+            ("KP-B2031", 8, 7, 13, photo_map["KP-B2031"], 5,
+             "Quick bath and tidy for Rosie — clean, professional, and easy. Aisha knows Rosie now "
+             "so drop-off is a breeze. Rosie runs in happily. Exactly what you want in a local groomer.",
+             "bath & tidy"),
+
+            ("KP-B2032", 1, 7, 1, photo_map["KP-B2032"], 4,
+             "Aisha was really patient with Max's dryer anxiety. Lots of treats, no rush, positive "
+             "reinforcement throughout. Full groom came out well. Max was anxious but Aisha never "
+             "forced anything. Will keep coming back as he builds confidence.",
+             "full groom"),
+
+            ("KP-B2033", 4, 8, 18, photo_map["KP-B2033"], 5,
+             "Carlos at Bronx Pro Groomers is exactly what we needed. Honest pricing, no upsells, "
+             "and he clearly loves big dogs. Bruno is a handful but Carlos managed him perfectly — "
+             "secured the table as we mentioned and got through the whole groom without incident.",
+             "large breed groom"),
+
+            ("KP-B2034", 4, 8, 6, photo_map["KP-B2034"], 4,
+             "Good deshed treatment for Duke in Riverdale. Carlos gave him time to settle "
+             "and the deshed made a noticeable difference in shedding at home. "
+             "Great pricing for quality work — not everyone needs to go to Manhattan.",
+             "deshed & bath"),
+
+            ("KP-B2035", 11, 8, 16, photo_map["KP-B2035"], 5,
+             "Carlos handled Cooper's energy really well. Found collar matting I didn't know about "
+             "and gave great advice about checking it regularly. Large breed groom was thorough and "
+             "reasonably priced. The Bronx finally has a great groomer for big dogs.",
+             "large breed groom"),
         ]
 
         for rev in reviews:
@@ -894,14 +1373,6 @@ def seed_db():
             )
 
         conn.commit()
-
-
-def bootstrap():
-    """Initialize and seed the database. Call once at startup."""
-    if _needs_reset() and os.path.exists(DB_PATH):
-        os.remove(DB_PATH)
-    init_db()
-    seed_db()
 
 
 if __name__ == "__main__":

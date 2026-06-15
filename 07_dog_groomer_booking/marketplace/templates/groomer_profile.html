@@ -21,11 +21,47 @@
     <div class="loading-card">Loading…</div>
   </div>
 
+  <!-- Portfolio photo upload modal -->
+  <div class="photo-modal" id="photo-modal" style="display:none" onclick="closeModal(event)">
+    <div class="photo-modal-card">
+      <h3>Add a groom photo</h3>
+      <div class="photo-drop-zone" id="drop-zone" onclick="document.getElementById('portfolio-file').click()">
+        <div id="drop-preview" class="drop-preview-empty">
+          <span style="font-size:2rem">📷</span>
+          <span>Tap to choose a photo</span>
+        </div>
+      </div>
+      <input type="file" id="portfolio-file" accept="image/*" style="display:none" onchange="previewPortfolioPhoto(event)">
+      <div class="photo-modal-fields">
+        <div class="field">
+          <label>Dog's name</label>
+          <input class="input" type="text" id="pm-dog-name" placeholder="e.g. Max" list="pm-dog-list">
+          <datalist id="pm-dog-list"></datalist>
+        </div>
+        <div class="field">
+          <label>Cut style</label>
+          <input class="input" type="text" id="pm-cut" placeholder="e.g. Teddy bear, Puppy cut">
+        </div>
+        <div class="field">
+          <label>Caption (optional)</label>
+          <input class="input" type="text" id="pm-caption" placeholder="e.g. First groom — so nervous, so sweet">
+        </div>
+      </div>
+      <p class="err" id="pm-err"></p>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn btn-primary" style="flex:1" onclick="submitPortfolioPhoto()">Add to portfolio</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<!-- Breed → dog.ceo API slug mapping for real photos -->
 <script>
   const GROOMER_ID = {{ groomer_id }};
+  let groomerData = null, pendingPortfolioUrl = null, pendingDogId = null;
+
+  // ── Breed → dog.ceo slug ─────────────────────────────────────────────────
 
   const DOG_CEO = {
     'goldendoodle':'retriever/golden','labradoodle':'retriever/labrador',
@@ -38,14 +74,13 @@
     'cavapoo':'retriever/golden','cockapoo':'cocker','yorkshire terrier':'terrier/yorkshire',
     'cocker spaniel':'cocker','bernese mountain dog':'mountain/bernese',
     'boxer':'boxer','airedale terrier':'terrier/airedale','beagle':'beagle',
-    'boston terrier':'terrier/boston','chihuahua':'chihuahua','dachshund':'dachshund',
-    'dalmatian':'dalmatian','great dane':'dane/great','havanese':'havanese',
-    'irish setter':'setter/irish','labrador':'labrador','maltipoo':'maltese',
+    'australian shepherd':'australian','border collie':'collie/border',
+    'french bulldog':'bulldog/french','boston terrier':'terrier/boston',
+    'chihuahua':'chihuahua','dachshund':'dachshund','dalmatian':'dalmatian',
+    'great dane':'dane/great','havanese':'havanese','irish setter':'setter/irish',
     'pomeranian':'pomeranian','rhodesian ridgeback':'ridgeback/rhodesian',
     'rottweiler':'rottweiler','saint bernard':'stbernard','samoyed':'samoyed',
-    'australian shepherd':'australian','border collie':'collie/border',
-    'shetland sheepdog':'sheepdog/shetland','weimaraner':'weimaraner',
-    'whippet':'whippet',
+    'shetland sheepdog':'sheepdog/shetland','weimaraner':'weimaraner','whippet':'whippet',
   };
 
   async function breedPhoto(breed) {
@@ -65,9 +100,126 @@
     return s.price_type === 'from' ? `from $${s.price}` : `$${s.price}`;
   }
 
+  // ── Upload helpers ────────────────────────────────────────────────────────
+
+  async function uploadFile(file) {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res  = await fetch('/api/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data.url;
+  }
+
+  // ── Groomer avatar upload ─────────────────────────────────────────────────
+
+  function triggerAvatarUpload() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const url = await uploadFile(file);
+        await fetch(`/api/groomer/${GROOMER_ID}/photo`, {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ url }),
+        });
+        // Update avatar in DOM
+        document.getElementById('groomer-avatar').innerHTML =
+          `<img src="${url}" class="avatar-photo" alt="${groomerData.name}">`;
+      } catch (err) { alert('Upload failed: ' + err.message); }
+    };
+    input.click();
+  }
+
+  // ── Portfolio photo modal ─────────────────────────────────────────────────
+
+  function openPhotoModal() {
+    document.getElementById('photo-modal').style.display = 'flex';
+    document.getElementById('pm-err').style.display = 'none';
+    document.getElementById('pm-dog-name').value = '';
+    document.getElementById('pm-cut').value = '';
+    document.getElementById('pm-caption').value = '';
+    document.getElementById('drop-preview').innerHTML =
+      '<span style="font-size:2rem">📷</span><span>Tap to choose a photo</span>';
+    pendingPortfolioUrl = null;
+
+    // Populate dog name datalist from groomer's past dogs (from portfolio)
+    const dogs = [...new Set(groomerData.portfolio.map(p => p.dog_name).filter(Boolean))];
+    document.getElementById('pm-dog-list').innerHTML = dogs.map(d => `<option value="${d}">`).join('');
+  }
+
+  function closeModal(e) {
+    if (!e || e.target === document.getElementById('photo-modal')) {
+      document.getElementById('photo-modal').style.display = 'none';
+    }
+  }
+
+  function previewPortfolioPhoto(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      document.getElementById('drop-preview').innerHTML =
+        `<img src="${ev.target.result}" style="width:100%;height:160px;object-fit:cover;border-radius:8px">`;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function submitPortfolioPhoto() {
+    const errEl = document.getElementById('pm-err');
+    errEl.style.display = 'none';
+    const file    = document.getElementById('portfolio-file').files[0];
+    const dogName = document.getElementById('pm-dog-name').value.trim();
+    const cut     = document.getElementById('pm-cut').value.trim();
+    const caption = document.getElementById('pm-caption').value.trim();
+
+    if (!file)    { errEl.textContent = 'Please choose a photo.'; errEl.style.display = 'block'; return; }
+    if (!dogName) { errEl.textContent = "Enter the dog's name.";  errEl.style.display = 'block'; return; }
+
+    const btn = document.querySelector('#photo-modal .btn-primary');
+    btn.disabled = true; btn.textContent = 'Uploading…';
+
+    try {
+      const url = await uploadFile(file);
+      // Find dog_id by name in past portfolio (fallback to 0)
+      const match = groomerData.portfolio.find(p => p.dog_name === dogName);
+      const dogId = match ? (match.dog_id || 0) : 0;
+
+      await fetch('/api/portfolio-photo', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ groomer_id: GROOMER_ID, dog_id: dogId, url, caption, cut_style: cut }),
+      });
+
+      // Prepend new photo to portfolio grid
+      const grid = document.getElementById('portfolio-grid');
+      const item = document.createElement('div');
+      item.className = 'portfolio-item';
+      item.innerHTML = `
+        <div class="portfolio-img-wrap">
+          <img src="${url}" class="portfolio-img" alt="${dogName}">
+        </div>
+        ${cut ? `<div class="portfolio-review"><span class="stars-sm">✨</span> <span class="portfolio-review-text">${cut}</span></div>` : ''}
+        <div class="portfolio-dog">${dogName}${caption ? ` · ${caption}` : ''}</div>
+      `;
+      grid.prepend(item);
+      document.getElementById('photo-modal').style.display = 'none';
+    } catch (err) {
+      errEl.textContent = 'Upload failed: ' + err.message;
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Add to portfolio';
+    }
+  }
+
+  // ── Main load ─────────────────────────────────────────────────────────────
+
   async function load() {
     const res = await fetch(`/api/groomer/${GROOMER_ID}`);
-    const g   = await res.json();
+    groomerData = await res.json();
+    const g = groomerData;
 
     document.title = `KindPaw — ${g.name}`;
     document.getElementById('book-btn').href = `/book/${g.id}`;
@@ -77,6 +229,10 @@
     const specs  = g.specialization_tags.map(s => `<span class="tag">${s}</span>`).join('');
     const breeds = g.breed_expertise.map(b => `<span class="tag">${b}</span>`).join('');
     const cuts   = g.cut_specialties.map(c => `<span class="tag tag--blue">${c}</span>`).join('');
+
+    const avatarInner = g.photo_url
+      ? `<img src="${g.photo_url}" class="avatar-photo" alt="${g.name}">`
+      : g.name.charAt(0);
 
     const services = g.services.map(s => `
       <div class="service-row">
@@ -92,14 +248,15 @@
       </div>
     `).join('');
 
-    // Render portfolio with placeholder images, then async load real photos
     const portfolioItems = g.portfolio.length ? g.portfolio.map((p, i) => `
       <div class="portfolio-item">
         <div class="portfolio-img-wrap" id="pimg-${i}">
-          <div class="portfolio-img-placeholder">
-            <span class="portfolio-label">${p.cut_style || 'groom'}</span>
-            <span class="portfolio-breed">${p.breed}</span>
-          </div>
+          ${p.photo_url
+            ? `<img src="${p.photo_url}" class="portfolio-img" alt="${p.breed || ''}">`
+            : `<div class="portfolio-img-placeholder">
+                <span class="portfolio-label">${p.cut_style || 'groom'}</span>
+                <span class="portfolio-breed">${p.breed || ''}</span>
+               </div>`}
         </div>
         ${p.rating ? `<div class="portfolio-review">
           <span class="stars-sm">${'★'.repeat(p.rating)}</span>
@@ -107,7 +264,7 @@
         </div>` : ''}
         <div class="portfolio-dog">${p.dog_name}${p.caption ? ` · ${p.caption}` : ''}</div>
       </div>
-    `).join('') : '<p class="empty">Portfolio photos coming soon.</p>';
+    `).join('') : '';
 
     const reviews = g.reviews.length ? g.reviews.map(r => `
       <div class="review-item">
@@ -121,7 +278,10 @@
 
     document.getElementById('content').innerHTML = `
       <div class="gprofile-hero">
-        <div class="gprofile-avatar">${g.name.charAt(0)}</div>
+        <div class="avatar-upload-wrap" onclick="triggerAvatarUpload()" title="Update profile photo">
+          <div class="gprofile-avatar" id="groomer-avatar">${avatarInner}</div>
+          <div class="avatar-upload-btn">📷</div>
+        </div>
         <div class="gprofile-info">
           <h1>${g.name}</h1>
           <div class="gprofile-biz">${g.business_name} · ${g.location}</div>
@@ -157,10 +317,16 @@
         <div class="services-list">${services}</div>
       </div>
 
-      <div class="gprofile-section" id="portfolio-section" ${g.portfolio.length ? '' : 'style="display:none"'}>
+      <div class="gprofile-section">
         <h2>Portfolio</h2>
         <p class="section-sub">All photos from verified grooms on KindPaw.</p>
-        <div class="portfolio-grid">${portfolioItems}</div>
+        <div class="portfolio-grid" id="portfolio-grid">
+          ${portfolioItems}
+          <div class="portfolio-add-card" onclick="openPhotoModal()">
+            <span class="portfolio-add-icon">📷</span>
+            <span class="portfolio-add-label">Add groom photo</span>
+          </div>
+        </div>
       </div>
 
       <div class="gprofile-section" style="padding-bottom:40px">
@@ -169,16 +335,15 @@
       </div>
     `;
 
-    // Async-load real dog photos into portfolio
-    if (g.portfolio.length) {
-      g.portfolio.forEach(async (p, i) => {
-        const url = await breedPhoto(p.breed);
-        const wrap = document.getElementById(`pimg-${i}`);
-        if (url && wrap) {
-          wrap.innerHTML = `<img src="${url}" class="portfolio-img" alt="${p.breed}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=portfolio-img-placeholder><span class=portfolio-label>${p.cut_style||'groom'}</span><span class=portfolio-breed>${p.breed}</span></div>'">`;
-        }
-      });
-    }
+    // Async-load breed photos for portfolio items with no uploaded photo
+    g.portfolio.forEach(async (p, i) => {
+      if (p.photo_url) return; // already has a real photo
+      const url  = await breedPhoto(p.breed || 'labrador');
+      const wrap = document.getElementById(`pimg-${i}`);
+      if (url && wrap) {
+        wrap.innerHTML = `<img src="${url}" class="portfolio-img" alt="${p.breed}" loading="lazy">`;
+      }
+    });
   }
 
   load();
