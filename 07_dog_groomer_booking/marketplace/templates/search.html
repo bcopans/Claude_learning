@@ -5,76 +5,85 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KindPaw — Find a groomer</title>
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
-<div class="search-page">
 
-  <header class="nav">
-    <a href="/" class="logo">🐾 KindPaw</a>
-    <div class="nav-spacer"></div>
-    <a href="/owner" class="nav-link">Chat with Sage →</a>
-  </header>
+<header class="nav">
+  <a href="/" class="logo">🐾 KindPaw</a>
+  <div class="nav-spacer"></div>
+  <a href="/owner" class="nav-link">Chat with Sage →</a>
+</header>
 
-  <div class="search-hero">
-    <h1>Find the right groomer for your dog</h1>
-    <p>Every groomer on KindPaw is verified, certified, and care-first.</p>
-  </div>
-
-  <!-- Filters -->
-  <div class="filter-bar">
-    <div class="filter-group">
-      <label>Breed</label>
-      <input type="text" id="breed-filter" placeholder="e.g. Goldendoodle" oninput="applyFilters()">
-    </div>
-    <div class="filter-group">
-      <label>Specialization</label>
-      <div class="filter-chips" id="spec-filters">
-        <button class="fchip" data-value="anxious dogs" onclick="toggleChip(this)">Anxious dogs</button>
-        <button class="fchip" data-value="senior dogs" onclick="toggleChip(this)">Senior dogs</button>
-        <button class="fchip" data-value="puppies" onclick="toggleChip(this)">Puppies</button>
-        <button class="fchip" data-value="show cuts" onclick="toggleChip(this)">Show cuts</button>
-      </div>
-    </div>
-    <div class="filter-group">
-      <label>Cut style</label>
-      <div class="filter-chips" id="cut-filters">
-        <button class="fchip" data-value="teddy bear" onclick="toggleChip(this)">Teddy bear</button>
-        <button class="fchip" data-value="puppy cut" onclick="toggleChip(this)">Puppy cut</button>
-        <button class="fchip" data-value="deshed" onclick="toggleChip(this)">Deshed</button>
-        <button class="fchip" data-value="hand-strip" onclick="toggleChip(this)">Hand strip</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="results-bar">
-    <span id="result-count"></span>
-    <button class="clear-btn" id="clear-btn" onclick="clearFilters()" style="display:none">Clear filters</button>
-  </div>
-
-  <!-- Groomer cards -->
-  <div class="groomer-grid" id="groomer-grid">
-    <div class="loading-card">Loading groomers…</div>
-  </div>
-
+<div class="search-hero">
+  <h1>Find the right groomer</h1>
+  <p>Every groomer is verified, certified, and care-first.</p>
 </div>
 
-<script>
-  let allGroomers = [];
+<!-- Filters -->
+<div class="filter-bar">
+  <div class="filter-group">
+    <label>Breed</label>
+    <input type="text" id="breed-filter" placeholder="e.g. Goldendoodle" oninput="applyFilters()" list="breed-list">
+    <datalist id="breed-list"></datalist>
+  </div>
+  <div class="filter-group">
+    <label>Specialization</label>
+    <div class="filter-chips">
+      <button class="fchip" data-value="anxious dogs"  onclick="toggleChip(this)">Anxious dogs</button>
+      <button class="fchip" data-value="senior dogs"   onclick="toggleChip(this)">Senior dogs</button>
+      <button class="fchip" data-value="puppies"       onclick="toggleChip(this)">Puppies</button>
+      <button class="fchip" data-value="show cuts"     onclick="toggleChip(this)">Show cuts</button>
+    </div>
+  </div>
+  <div class="filter-group">
+    <label>Cut style</label>
+    <div class="filter-chips">
+      <button class="fchip" data-value="teddy bear" onclick="toggleChip(this)">Teddy bear</button>
+      <button class="fchip" data-value="puppy cut"  onclick="toggleChip(this)">Puppy cut</button>
+      <button class="fchip" data-value="deshed"     onclick="toggleChip(this)">Deshed</button>
+      <button class="fchip" data-value="hand-strip" onclick="toggleChip(this)">Hand strip</button>
+    </div>
+  </div>
+</div>
 
-  function stars(rating) {
-    const full  = Math.floor(rating);
-    const half  = rating % 1 >= 0.5 ? 1 : 0;
-    const empty = 5 - full - half;
-    return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
+<!-- Results bar + view toggle -->
+<div class="results-bar">
+  <span id="result-count"></span>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="clear-btn" id="clear-btn" onclick="clearFilters()" style="display:none">Clear filters</button>
+    <div class="view-toggle">
+      <button class="vtab vtab--active" id="tab-list" onclick="setView('list')">≡ List</button>
+      <button class="vtab" id="tab-map"  onclick="setView('map')">⊕ Map</button>
+    </div>
+  </div>
+</div>
+
+<!-- List view -->
+<div class="groomer-grid" id="groomer-grid"></div>
+
+<!-- Map view -->
+<div id="map-view" style="display:none">
+  <div id="map" class="map-container"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  let allGroomers = [], filteredGroomers = [], map = null, markers = [];
+  const BREEDS = ["Labrador Retriever","Golden Retriever","German Shepherd","Bulldog","Beagle","Poodle","Miniature Poodle","Chihuahua","Boxer","Miniature Schnauzer","Yorkshire Terrier","Dachshund","Shih Tzu","Doberman Pinscher","Great Dane","Siberian Husky","Rottweiler","Australian Shepherd","Border Collie","Cocker Spaniel","Pembroke Welsh Corgi","Maltese","Bichon Frise","Havanese","Shetland Sheepdog","Cavalier King Charles Spaniel","Pomeranian","Boston Terrier","Bernese Mountain Dog","Saint Bernard","Weimaraner","Goldendoodle","Labradoodle","Cavapoo","Cockapoo","Maltipoo","Aussiedoodle","Bernedoodle","Airedale Terrier","Rhodesian Ridgeback","Belgian Malinois","Italian Greyhound","Whippet","Basenji","Bloodhound","Basset Hound","Irish Setter","Samoyed"];
+
+  document.getElementById('breed-list').innerHTML = BREEDS.map(b => `<option value="${b}">`).join('');
+
+  function stars(r) {
+    const f = Math.floor(r), h = r % 1 >= 0.5 ? 1 : 0;
+    return '★'.repeat(f) + (h ? '½' : '') + '☆'.repeat(5 - f - h);
   }
 
   function renderCard(g) {
-    const specs = g.specialization_tags.slice(0, 3).map(s =>
-      `<span class="tag">${s}</span>`).join('');
-    const certs = g.certification_tags.map(c =>
-      `<span class="cert-badge">${c}</span>`).join('');
+    const specs  = g.specialization_tags.slice(0,3).map(s => `<span class="tag">${s}</span>`).join('');
+    const certs  = g.certification_tags.map(c => `<span class="cert-badge">${c}</span>`).join('');
     return `
-      <div class="groomer-card">
+      <div class="groomer-card" onclick="location.href='/groomer/${g.id}/profile'" style="cursor:pointer">
         <div class="gcard-avatar">${g.name.charAt(0)}</div>
         <div class="gcard-body">
           <div class="gcard-top">
@@ -88,51 +97,101 @@
               <span class="rating-cnt">(${g.total_reviews})</span>
             </div>
           </div>
-          <p class="gcard-bio">${g.bio.slice(0, 120)}…</p>
+          <p class="gcard-bio">${g.bio.slice(0,120)}…</p>
           <div class="gcard-tags">${specs}</div>
           <div class="gcard-certs">${certs}</div>
           <div class="gcard-footer">
             <span class="gcard-price">From $${g.starting_from}</span>
-            <a href="/groomer/${g.id}/profile" class="btn-secondary">View profile →</a>
+            <a href="/groomer/${g.id}/profile" class="btn-secondary" onclick="event.stopPropagation()">View profile →</a>
           </div>
         </div>
       </div>`;
   }
 
   function applyFilters() {
-    const breed   = document.getElementById('breed-filter').value.toLowerCase().trim();
-    const specs   = [...document.querySelectorAll('#spec-filters .fchip.active')].map(c => c.dataset.value);
-    const cuts    = [...document.querySelectorAll('#cut-filters .fchip.active')].map(c => c.dataset.value);
-    const hasFilter = breed || specs.length || cuts.length;
+    const breed  = document.getElementById('breed-filter').value.toLowerCase().trim();
+    const specs  = [...document.querySelectorAll('.fchip.active')].map(c => c.dataset.value);
+    const cuts   = [];
+    const hasFilter = breed || specs.length;
 
     document.getElementById('clear-btn').style.display = hasFilter ? 'inline' : 'none';
 
-    const filtered = allGroomers.filter(g => {
+    filteredGroomers = allGroomers.filter(g => {
       if (breed && !g.breed_expertise.some(b => b.toLowerCase().includes(breed))) return false;
       if (specs.length && !specs.every(s => g.specialization_tags.some(t => t.toLowerCase().includes(s)))) return false;
-      if (cuts.length  && !cuts.every(c => g.cut_specialties.some(t => t.toLowerCase().includes(c)))) return false;
       return true;
     });
 
+    const count = filteredGroomers.length;
+    document.getElementById('result-count').textContent = `${count} groomer${count !== 1 ? 's' : ''} found`;
+
     const grid = document.getElementById('groomer-grid');
-    document.getElementById('result-count').textContent = `${filtered.length} groomer${filtered.length !== 1 ? 's' : ''} found`;
-
-    if (!filtered.length) {
-      grid.innerHTML = '<div class="empty-state">No groomers match those filters. <button onclick="clearFilters()" class="link-btn">Clear filters</button></div>';
+    if (!count) {
+      grid.innerHTML = '<div class="empty-state">No groomers match — <button onclick="clearFilters()" class="link-btn">clear filters</button></div>';
     } else {
-      grid.innerHTML = filtered.map(renderCard).join('');
+      grid.innerHTML = filteredGroomers.map(renderCard).join('');
     }
+
+    if (map) updateMapMarkers();
   }
 
-  function toggleChip(btn) {
-    btn.classList.toggle('active');
-    applyFilters();
-  }
+  function toggleChip(btn) { btn.classList.toggle('active'); applyFilters(); }
 
   function clearFilters() {
     document.getElementById('breed-filter').value = '';
     document.querySelectorAll('.fchip.active').forEach(c => c.classList.remove('active'));
     applyFilters();
+  }
+
+  // ── Map ──────────────────────────────────────────────────────────────────
+
+  function setView(v) {
+    const isList = v === 'list';
+    document.getElementById('groomer-grid').style.display = isList ? '' : 'none';
+    document.getElementById('map-view').style.display     = isList ? 'none' : 'block';
+    document.getElementById('tab-list').classList.toggle('vtab--active', isList);
+    document.getElementById('tab-map').classList.toggle('vtab--active', !isList);
+
+    if (!isList) {
+      if (!map) initMap();
+      else { map.invalidateSize(); updateMapMarkers(); }
+    }
+  }
+
+  function initMap() {
+    map = L.map('map').setView([45.52, -122.67], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>'
+    }).addTo(map);
+    updateMapMarkers();
+  }
+
+  function updateMapMarkers() {
+    markers.forEach(m => m.remove());
+    markers = [];
+
+    filteredGroomers.filter(g => g.lat && g.lng).forEach(g => {
+      const popup = `
+        <div style="min-width:180px">
+          <strong style="font-size:0.95rem">${g.name}</strong><br>
+          <span style="color:#6B7280;font-size:0.8rem">${g.business_name}</span><br>
+          <span style="color:#F59E0B;font-size:0.8rem">${'★'.repeat(Math.floor(g.avg_rating))} ${g.avg_rating}</span>
+          <span style="color:#6B7280;font-size:0.75rem">(${g.total_reviews})</span><br>
+          <strong style="color:#16A34A;font-size:0.85rem">From $${g.starting_from}</strong><br>
+          <a href="/groomer/${g.id}/profile" style="color:#16A34A;font-size:0.82rem;font-weight:600">View profile →</a>
+        </div>`;
+
+      const icon = L.divIcon({
+        html: `<div style="background:#16A34A;color:#fff;border-radius:9999px;padding:4px 10px;font-size:0.75rem;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2)">${g.name.split(' ')[0]}</div>`,
+        className: '',
+        iconAnchor: [30, 12],
+      });
+
+      const m = L.marker([g.lat, g.lng], { icon })
+        .bindPopup(popup)
+        .addTo(map);
+      markers.push(m);
+    });
   }
 
   async function load() {

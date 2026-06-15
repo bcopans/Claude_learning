@@ -129,6 +129,8 @@ def api_groomers():
                 "breed_expertise":   json.loads(g["breed_expertise"]),
                 "cut_specialties":   json.loads(g["cut_specialties"]),
                 "starting_from":     min_price,
+                "lat":               g["lat"] if g["lat"] else 0,
+                "lng":               g["lng"] if g["lng"] else 0,
             })
     return jsonify(result)
 

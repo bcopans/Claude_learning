@@ -63,7 +63,23 @@
           </div>
           <div class="field">
             <label>Breed</label>
-            <input class="input" type="text" id="dog-breed-in" placeholder="Goldendoodle">
+            <input class="input" type="text" id="dog-breed-in" placeholder="Goldendoodle" list="breed-list" autocomplete="off">
+            <datalist id="breed-list">
+              <option>Labrador Retriever</option><option>Golden Retriever</option><option>German Shepherd</option>
+              <option>Bulldog</option><option>Beagle</option><option>Poodle</option><option>Miniature Poodle</option>
+              <option>Chihuahua</option><option>Boxer</option><option>Miniature Schnauzer</option>
+              <option>Yorkshire Terrier</option><option>Dachshund</option><option>Shih Tzu</option>
+              <option>Doberman Pinscher</option><option>Great Dane</option><option>Siberian Husky</option>
+              <option>Rottweiler</option><option>Australian Shepherd</option><option>Border Collie</option>
+              <option>Cocker Spaniel</option><option>Pembroke Welsh Corgi</option><option>Maltese</option>
+              <option>Bichon Frise</option><option>Havanese</option><option>Shetland Sheepdog</option>
+              <option>Cavalier King Charles Spaniel</option><option>Pomeranian</option><option>Boston Terrier</option>
+              <option>Bernese Mountain Dog</option><option>Saint Bernard</option><option>Weimaraner</option>
+              <option>Goldendoodle</option><option>Labradoodle</option><option>Cavapoo</option>
+              <option>Cockapoo</option><option>Maltipoo</option><option>Aussiedoodle</option>
+              <option>Bernedoodle</option><option>Samoyed</option><option>Irish Setter</option>
+              <option>Rhodesian Ridgeback</option><option>Belgian Malinois</option><option>Airedale Terrier</option>
+            </datalist>
           </div>
           <button class="btn btn-primary btn-block" onclick="createAccount()">Create account &amp; continue</button>
           <p class="err" id="reg-err"></p>
@@ -136,7 +152,7 @@
 <script>
   const GROOMER_ID = {{ groomer_id }};
   let groomer = null, owner = null, selectedDog = null, selectedService = null, selectedDate = null, selectedTime = null;
-  let currentStep = 1;
+  let currentStep = 1, preSelectedServiceId = null, preSelectedService = null;
 
   const STEPS = ['You', 'Dog', 'Service', 'Date & Time', 'Confirm'];
 
@@ -185,6 +201,16 @@
     document.getElementById('g-name').textContent   = groomer.name;
     document.getElementById('g-biz').textContent    = groomer.business_name;
     document.getElementById('groomer-header').style.display = 'flex';
+
+    // Pre-select service from URL param (?service=ID)
+    const preServiceId = parseInt(new URLSearchParams(location.search).get('service'));
+    if (preServiceId) {
+      const svc = groomer.services.find(s => s.id === preServiceId);
+      if (svc) {
+        preSelectedServiceId = preServiceId;
+        preSelectedService   = svc;
+      }
+    }
   }
 
   // ── Step 1: Phone lookup ──────────────────────────────────────────────────
@@ -272,10 +298,25 @@
     document.querySelectorAll('#dog-options .option-card').forEach(c => c.classList.remove('selected'));
     el.classList.add('selected');
     selectedDog = {id, name, breed};
-    setTimeout(() => { renderServices(); goStep(3); }, 200);
+    setTimeout(() => {
+      if (preSelectedService) {
+        // Skip step 3 — service was pre-selected from profile page
+        const s = preSelectedService;
+        selectedService = {id: s.id, name: s.name, price: s.price, duration: s.duration_mins};
+        setMinDate();
+        goStep(4);
+      } else {
+        renderServices();
+        goStep(3);
+      }
+    }, 200);
   }
 
   // ── Step 3: Select service ────────────────────────────────────────────────
+
+  function priceLabel(s) {
+    return s.price_type === 'from' ? `from $${s.price}` : `$${s.price}`;
+  }
 
   function renderServices() {
     document.getElementById('service-options').innerHTML = groomer.services.map(s => `
@@ -283,7 +324,7 @@
         <div class="option-info">
           <div class="option-label">${s.name}</div>
           <div class="option-sub">${s.description || ''}</div>
-          <div class="option-meta">$${s.price} · ${s.duration_mins} min</div>
+          <div class="option-meta">${priceLabel(s)} · ${s.duration_mins} min${s.price_type === 'from' ? ' <span style="color:var(--muted);font-weight:400;font-size:0.75rem">· varies by coat</span>' : ''}</div>
         </div>
         <span class="option-check">✓</span>
       </div>

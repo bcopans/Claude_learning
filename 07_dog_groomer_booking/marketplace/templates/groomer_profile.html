@@ -13,7 +13,7 @@
     <a href="/search" class="logo">🐾 KindPaw</a>
     <div class="nav-spacer"></div>
     <div id="book-cta" style="display:none">
-      <a id="book-btn" href="#" class="btn btn-primary" style="height:36px;font-size:0.85rem">Book now</a>
+      <a id="book-btn" href="#" class="btn btn-primary" style="height:36px;padding:0 16px;font-size:0.85rem">Book now</a>
     </div>
   </header>
 
@@ -23,50 +23,89 @@
 
 </div>
 
+<!-- Breed → dog.ceo API slug mapping for real photos -->
 <script>
   const GROOMER_ID = {{ groomer_id }};
 
-  function stars(rating) {
-    return '★'.repeat(Math.floor(rating)) + (rating % 1 >= 0.5 ? '½' : '') + '☆'.repeat(5 - Math.ceil(rating));
+  const DOG_CEO = {
+    'goldendoodle':'retriever/golden','labradoodle':'retriever/labrador',
+    'poodle':'poodle','miniature poodle':'poodle','toy poodle':'poodle',
+    'shih tzu':'shihtzu','labrador retriever':'labrador',
+    'golden retriever':'retriever/golden','german shepherd':'germanshepherd',
+    'siberian husky':'husky','miniature schnauzer':'schnauzer/miniature',
+    'schnauzer':'schnauzer/standard','corgi':'corgi/cardigan',
+    'pembroke welsh corgi':'pembroke','bichon frise':'bichon','maltese':'maltese',
+    'cavapoo':'retriever/golden','cockapoo':'cocker','yorkshire terrier':'terrier/yorkshire',
+    'cocker spaniel':'cocker','bernese mountain dog':'mountain/bernese',
+    'boxer':'boxer','airedale terrier':'terrier/airedale','beagle':'beagle',
+    'boston terrier':'terrier/boston','chihuahua':'chihuahua','dachshund':'dachshund',
+    'dalmatian':'dalmatian','great dane':'dane/great','havanese':'havanese',
+    'irish setter':'setter/irish','labrador':'labrador','maltipoo':'maltese',
+    'pomeranian':'pomeranian','rhodesian ridgeback':'ridgeback/rhodesian',
+    'rottweiler':'rottweiler','saint bernard':'stbernard','samoyed':'samoyed',
+    'australian shepherd':'australian','border collie':'collie/border',
+    'shetland sheepdog':'sheepdog/shetland','weimaraner':'weimaraner',
+    'whippet':'whippet',
+  };
+
+  async function breedPhoto(breed) {
+    const slug = DOG_CEO[breed.toLowerCase()] || 'retriever/golden';
+    try {
+      const r = await fetch(`https://dog.ceo/api/breed/${slug}/images/random`);
+      const d = await r.json();
+      return d.status === 'success' ? d.message : null;
+    } catch { return null; }
+  }
+
+  function stars(r) {
+    return '★'.repeat(Math.floor(r)) + (r % 1 >= 0.5 ? '½' : '') + '☆'.repeat(5 - Math.ceil(r));
+  }
+
+  function priceLabel(s) {
+    return s.price_type === 'from' ? `from $${s.price}` : `$${s.price}`;
   }
 
   async function load() {
-    const res  = await fetch(`/api/groomer/${GROOMER_ID}`);
-    const g    = await res.json();
+    const res = await fetch(`/api/groomer/${GROOMER_ID}`);
+    const g   = await res.json();
 
     document.title = `KindPaw — ${g.name}`;
     document.getElementById('book-btn').href = `/book/${g.id}`;
     document.getElementById('book-cta').style.display = 'block';
 
-    const certs = g.certification_tags.map(c => `<span class="cert-badge">${c}</span>`).join('');
-    const specs = g.specialization_tags.map(s => `<span class="tag">${s}</span>`).join('');
-    const breeds = g.breed_expertise.map(b => `<span class="tag tag--green">${b}</span>`).join('');
-    const cuts  = g.cut_specialties.map(c => `<span class="tag tag--blue">${c}</span>`).join('');
+    const certs  = g.certification_tags.map(c => `<span class="cert-badge">${c}</span>`).join('');
+    const specs  = g.specialization_tags.map(s => `<span class="tag">${s}</span>`).join('');
+    const breeds = g.breed_expertise.map(b => `<span class="tag">${b}</span>`).join('');
+    const cuts   = g.cut_specialties.map(c => `<span class="tag tag--blue">${c}</span>`).join('');
 
     const services = g.services.map(s => `
       <div class="service-row">
-        <div>
+        <div class="service-info">
           <div class="service-name">${s.name}</div>
           ${s.description ? `<div class="service-desc">${s.description}</div>` : ''}
         </div>
         <div class="service-right">
-          <div class="service-price">$${s.price}</div>
+          <div class="service-price">${priceLabel(s)}</div>
           <div class="service-dur">${s.duration_mins} min</div>
+          <a href="/book/${g.id}?service=${s.id}" class="btn-book-service">Book</a>
         </div>
       </div>
     `).join('');
 
-    const portfolio = g.portfolio.length ? g.portfolio.map(p => `
+    // Render portfolio with placeholder images, then async load real photos
+    const portfolioItems = g.portfolio.length ? g.portfolio.map((p, i) => `
       <div class="portfolio-item">
-        <div class="portfolio-img-placeholder">
-          <div class="portfolio-label">${p.cut_style || 'groom'}</div>
-          <div class="portfolio-breed">${p.breed}</div>
+        <div class="portfolio-img-wrap" id="pimg-${i}">
+          <div class="portfolio-img-placeholder">
+            <span class="portfolio-label">${p.cut_style || 'groom'}</span>
+            <span class="portfolio-breed">${p.breed}</span>
+          </div>
         </div>
         ${p.rating ? `<div class="portfolio-review">
           <span class="stars-sm">${'★'.repeat(p.rating)}</span>
-          <span class="portfolio-review-text">"${p.review_text ? p.review_text.slice(0, 80) + '…' : ''}"</span>
+          <span class="portfolio-review-text">"${p.review_text ? p.review_text.slice(0,80) + '…' : ''}"</span>
         </div>` : ''}
-        <div class="portfolio-dog">${p.dog_name} · ${p.caption || ''}</div>
+        <div class="portfolio-dog">${p.dog_name}${p.caption ? ` · ${p.caption}` : ''}</div>
       </div>
     `).join('') : '<p class="empty">Portfolio photos coming soon.</p>';
 
@@ -114,21 +153,32 @@
 
       <div class="gprofile-section">
         <h2>Services & pricing</h2>
+        <p class="section-sub">Tap any service to book directly.</p>
         <div class="services-list">${services}</div>
-        <a href="/book/${g.id}" class="btn-primary" style="margin-top:16px;display:inline-block">Book with ${g.name} →</a>
       </div>
 
-      <div class="gprofile-section">
+      <div class="gprofile-section" id="portfolio-section" ${g.portfolio.length ? '' : 'style="display:none"'}>
         <h2>Portfolio</h2>
-        <p class="section-sub">All photos are from verified grooms on KindPaw.</p>
-        <div class="portfolio-grid">${portfolio}</div>
+        <p class="section-sub">All photos from verified grooms on KindPaw.</p>
+        <div class="portfolio-grid">${portfolioItems}</div>
       </div>
 
-      <div class="gprofile-section">
-        <h2>Reviews</h2>
+      <div class="gprofile-section" style="padding-bottom:40px">
+        <h2>Reviews (${g.reviews.length})</h2>
         <div class="reviews-list">${reviews}</div>
       </div>
     `;
+
+    // Async-load real dog photos into portfolio
+    if (g.portfolio.length) {
+      g.portfolio.forEach(async (p, i) => {
+        const url = await breedPhoto(p.breed);
+        const wrap = document.getElementById(`pimg-${i}`);
+        if (url && wrap) {
+          wrap.innerHTML = `<img src="${url}" class="portfolio-img" alt="${p.breed}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=portfolio-img-placeholder><span class=portfolio-label>${p.cut_style||'groom'}</span><span class=portfolio-breed>${p.breed}</span></div>'">`;
+        }
+      });
+    }
   }
 
   load();
