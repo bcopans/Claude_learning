@@ -39,7 +39,7 @@
 
       <div id="phone-section">
         <div class="field" style="margin-bottom:12px">
-          <input class="input" type="tel" id="phone-in" placeholder="(503) 555-0101" autocomplete="tel">
+          <input class="input" type="tel" id="phone-in" placeholder="(212) 555-0101" autocomplete="tel">
         </div>
         <button class="btn btn-primary btn-block" onclick="lookupOwner()">Continue</button>
         <p class="err" id="phone-err"></p>
@@ -63,23 +63,9 @@
           </div>
           <div class="field">
             <label>Breed</label>
-            <input class="input" type="text" id="dog-breed-in" placeholder="Goldendoodle" list="breed-list" autocomplete="off">
-            <datalist id="breed-list">
-              <option>Labrador Retriever</option><option>Golden Retriever</option><option>German Shepherd</option>
-              <option>Bulldog</option><option>Beagle</option><option>Poodle</option><option>Miniature Poodle</option>
-              <option>Chihuahua</option><option>Boxer</option><option>Miniature Schnauzer</option>
-              <option>Yorkshire Terrier</option><option>Dachshund</option><option>Shih Tzu</option>
-              <option>Doberman Pinscher</option><option>Great Dane</option><option>Siberian Husky</option>
-              <option>Rottweiler</option><option>Australian Shepherd</option><option>Border Collie</option>
-              <option>Cocker Spaniel</option><option>Pembroke Welsh Corgi</option><option>Maltese</option>
-              <option>Bichon Frise</option><option>Havanese</option><option>Shetland Sheepdog</option>
-              <option>Cavalier King Charles Spaniel</option><option>Pomeranian</option><option>Boston Terrier</option>
-              <option>Bernese Mountain Dog</option><option>Saint Bernard</option><option>Weimaraner</option>
-              <option>Goldendoodle</option><option>Labradoodle</option><option>Cavapoo</option>
-              <option>Cockapoo</option><option>Maltipoo</option><option>Aussiedoodle</option>
-              <option>Bernedoodle</option><option>Samoyed</option><option>Irish Setter</option>
-              <option>Rhodesian Ridgeback</option><option>Belgian Malinois</option><option>Airedale Terrier</option>
-            </datalist>
+            <div class="ac-wrap">
+              <input class="input" type="text" id="dog-breed-in" placeholder="Goldendoodle" autocomplete="off">
+            </div>
           </div>
           <button class="btn btn-primary btn-block" onclick="createAccount()">Create account &amp; continue</button>
           <p class="err" id="reg-err"></p>
@@ -153,6 +139,45 @@
   const GROOMER_ID = {{ groomer_id }};
   let groomer = null, owner = null, selectedDog = null, selectedService = null, selectedDate = null, selectedTime = null;
   let currentStep = 1, preSelectedServiceId = null, preSelectedService = null;
+
+  const BREEDS = ["Labrador Retriever","Golden Retriever","German Shepherd","Bulldog","Beagle","Poodle","Miniature Poodle","Chihuahua","Boxer","Miniature Schnauzer","Yorkshire Terrier","Dachshund","Shih Tzu","Doberman Pinscher","Great Dane","Siberian Husky","Rottweiler","Australian Shepherd","Border Collie","Cocker Spaniel","Pembroke Welsh Corgi","Maltese","Bichon Frise","Havanese","Shetland Sheepdog","Cavalier King Charles Spaniel","Pomeranian","Boston Terrier","Bernese Mountain Dog","Saint Bernard","Weimaraner","Goldendoodle","Labradoodle","Cavapoo","Cockapoo","Maltipoo","Aussiedoodle","Bernedoodle","Airedale Terrier","Rhodesian Ridgeback","Belgian Malinois","Irish Setter","Samoyed","Whippet","Dachshund"];
+
+  function makeAutocomplete(input, options) {
+    const wrap = input.closest('.ac-wrap') || input.parentNode;
+    const dd = document.createElement('div');
+    dd.className = 'ac-dropdown';
+    dd.style.display = 'none';
+    wrap.appendChild(dd);
+    function render(val) {
+      const q = val.toLowerCase().trim();
+      if (!q) { dd.style.display = 'none'; return; }
+      const hits = options.filter(o => o.toLowerCase().includes(q)).slice(0, 8);
+      if (!hits.length) { dd.style.display = 'none'; return; }
+      dd.innerHTML = hits.map(h => `<div class="ac-item" data-v="${h}">${h}</div>`).join('');
+      dd.style.display = 'block';
+    }
+    input.addEventListener('input', e => render(e.target.value));
+    input.addEventListener('focus', e => { if (e.target.value) render(e.target.value); });
+    dd.addEventListener('mousedown', e => {
+      const item = e.target.closest('.ac-item');
+      if (!item) return;
+      e.preventDefault(); input.value = item.dataset.v; dd.style.display = 'none';
+    });
+    document.addEventListener('click', e => { if (!wrap.contains(e.target)) dd.style.display = 'none'; });
+    input.addEventListener('keydown', e => {
+      const items = [...dd.querySelectorAll('.ac-item')];
+      const cur = dd.querySelector('.ac-item.focused');
+      if (e.key === 'ArrowDown') { e.preventDefault(); const n = cur ? (items[items.indexOf(cur)+1]||items[0]) : items[0]; cur?.classList.remove('focused'); n?.classList.add('focused'); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); const p = cur ? (items[items.indexOf(cur)-1]||items[items.length-1]) : items[items.length-1]; cur?.classList.remove('focused'); p?.classList.add('focused'); }
+      else if (e.key === 'Enter' && cur) { e.preventDefault(); input.value = cur.dataset.v; dd.style.display = 'none'; }
+      else if (e.key === 'Escape') { dd.style.display = 'none'; }
+    });
+  }
+
+  // Wire up breed autocomplete on page load
+  window.addEventListener('DOMContentLoaded', () => {
+    makeAutocomplete(document.getElementById('dog-breed-in'), BREEDS);
+  });
 
   const STEPS = ['You', 'Dog', 'Service', 'Date & Time', 'Confirm'];
 

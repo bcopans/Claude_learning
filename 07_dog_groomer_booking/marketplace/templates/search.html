@@ -24,8 +24,9 @@
 <div class="filter-bar">
   <div class="filter-group">
     <label>Breed</label>
-    <input type="text" id="breed-filter" placeholder="e.g. Goldendoodle" oninput="applyFilters()" list="breed-list">
-    <datalist id="breed-list"></datalist>
+    <div class="ac-wrap">
+      <input type="text" id="breed-filter" placeholder="e.g. Goldendoodle" autocomplete="off">
+    </div>
   </div>
   <div class="filter-group">
     <label>Specialization</label>
@@ -72,7 +73,49 @@
   let allGroomers = [], filteredGroomers = [], map = null, markers = [];
   const BREEDS = ["Labrador Retriever","Golden Retriever","German Shepherd","Bulldog","Beagle","Poodle","Miniature Poodle","Chihuahua","Boxer","Miniature Schnauzer","Yorkshire Terrier","Dachshund","Shih Tzu","Doberman Pinscher","Great Dane","Siberian Husky","Rottweiler","Australian Shepherd","Border Collie","Cocker Spaniel","Pembroke Welsh Corgi","Maltese","Bichon Frise","Havanese","Shetland Sheepdog","Cavalier King Charles Spaniel","Pomeranian","Boston Terrier","Bernese Mountain Dog","Saint Bernard","Weimaraner","Goldendoodle","Labradoodle","Cavapoo","Cockapoo","Maltipoo","Aussiedoodle","Bernedoodle","Airedale Terrier","Rhodesian Ridgeback","Belgian Malinois","Italian Greyhound","Whippet","Basenji","Bloodhound","Basset Hound","Irish Setter","Samoyed"];
 
-  document.getElementById('breed-list').innerHTML = BREEDS.map(b => `<option value="${b}">`).join('');
+  function makeAutocomplete(input, options, onSelect) {
+    const wrap = input.closest('.ac-wrap') || input.parentNode;
+    const dd = document.createElement('div');
+    dd.className = 'ac-dropdown';
+    dd.style.display = 'none';
+    wrap.appendChild(dd);
+
+    function render(val) {
+      const q = val.toLowerCase().trim();
+      if (!q) { dd.style.display = 'none'; return; }
+      const hits = options.filter(o => o.toLowerCase().includes(q)).slice(0, 8);
+      if (!hits.length) { dd.style.display = 'none'; return; }
+      dd.innerHTML = hits.map(h => `<div class="ac-item" data-v="${h}">${h}</div>`).join('');
+      dd.style.display = 'block';
+    }
+
+    input.addEventListener('input', e => { render(e.target.value); onSelect && onSelect(); });
+    input.addEventListener('focus', e => { if (e.target.value) render(e.target.value); });
+    dd.addEventListener('mousedown', e => {
+      const item = e.target.closest('.ac-item');
+      if (!item) return;
+      e.preventDefault();
+      input.value = item.dataset.v;
+      dd.style.display = 'none';
+      onSelect && onSelect();
+    });
+    document.addEventListener('click', e => { if (!wrap.contains(e.target)) dd.style.display = 'none'; });
+    input.addEventListener('keydown', e => {
+      const items = [...dd.querySelectorAll('.ac-item')];
+      const cur = dd.querySelector('.ac-item.focused');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = cur ? (items[items.indexOf(cur) + 1] || items[0]) : items[0];
+        cur?.classList.remove('focused'); next?.classList.add('focused');
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prev = cur ? (items[items.indexOf(cur) - 1] || items[items.length - 1]) : items[items.length - 1];
+        cur?.classList.remove('focused'); prev?.classList.add('focused');
+      } else if (e.key === 'Enter' && cur) {
+        e.preventDefault(); input.value = cur.dataset.v; dd.style.display = 'none'; onSelect && onSelect();
+      } else if (e.key === 'Escape') { dd.style.display = 'none'; }
+    });
+  }
 
   function stars(r) {
     const f = Math.floor(r), h = r % 1 >= 0.5 ? 1 : 0;
@@ -80,11 +123,14 @@
   }
 
   function renderCard(g) {
-    const specs  = g.specialization_tags.slice(0,3).map(s => `<span class="tag">${s}</span>`).join('');
-    const certs  = g.certification_tags.map(c => `<span class="cert-badge">${c}</span>`).join('');
+    const specs = g.specialization_tags.slice(0, 2).map(s => `<span class="tag">${s}</span>`).join('');
+    const certs = g.certification_tags.slice(0, 2).map(c => `<span class="cert-badge">${c}</span>`).join('');
+    const avatar = g.photo_url
+      ? `<img src="${g.photo_url}" alt="${g.name}">`
+      : g.name.charAt(0);
     return `
       <div class="groomer-card" onclick="location.href='/groomer/${g.id}/profile'" style="cursor:pointer">
-        <div class="gcard-avatar">${g.name.charAt(0)}</div>
+        <div class="gcard-avatar">${avatar}</div>
         <div class="gcard-body">
           <div class="gcard-top">
             <div>
@@ -97,12 +143,11 @@
               <span class="rating-cnt">(${g.total_reviews})</span>
             </div>
           </div>
-          <p class="gcard-bio">${g.bio.slice(0,120)}…</p>
-          <div class="gcard-tags">${specs}</div>
-          <div class="gcard-certs">${certs}</div>
+          <p class="gcard-bio">${g.bio.slice(0, 100)}…</p>
+          <div class="gcard-tags">${specs}${certs}</div>
           <div class="gcard-footer">
             <span class="gcard-price">From $${g.starting_from}</span>
-            <a href="/groomer/${g.id}/profile" class="btn-secondary" onclick="event.stopPropagation()">View profile →</a>
+            <a href="/groomer/${g.id}/profile" class="btn btn-primary" style="height:34px;padding:0 14px;font-size:0.8rem" onclick="event.stopPropagation()">Book →</a>
           </div>
         </div>
       </div>`;
@@ -197,6 +242,7 @@
   async function load() {
     const res = await fetch('/api/groomers');
     allGroomers = await res.json();
+    makeAutocomplete(document.getElementById('breed-filter'), BREEDS, applyFilters);
     applyFilters();
   }
 

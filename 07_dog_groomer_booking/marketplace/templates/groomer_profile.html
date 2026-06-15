@@ -297,18 +297,12 @@
       <div class="gprofile-bio">${g.bio}</div>
 
       <div class="gprofile-section">
-        <h2>Specializations</h2>
-        <div class="tag-row">${specs}</div>
-      </div>
-
-      <div class="gprofile-section">
-        <h2>Breed expertise</h2>
-        <div class="tag-row">${breeds}</div>
-      </div>
-
-      <div class="gprofile-section">
-        <h2>Cut styles</h2>
-        <div class="tag-row">${cuts}</div>
+        <h2>Expertise</h2>
+        <div class="expertise-card">
+          ${specs ? `<div class="expertise-row"><span class="expertise-label">Specializes in</span><div class="tag-row">${specs}</div></div>` : ''}
+          ${breeds ? `<div class="expertise-row"><span class="expertise-label">Breeds</span><div class="tag-row">${breeds}</div></div>` : ''}
+          ${cuts ? `<div class="expertise-row"><span class="expertise-label">Cut styles</span><div class="tag-row">${cuts}</div></div>` : ''}
+        </div>
       </div>
 
       <div class="gprofile-section">
