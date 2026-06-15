@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KindPaw — Healthy dogs. Happy lives.</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="landing">
+    <header class="landing-header">
+      <div class="logo">🐾 KindPaw</div>
+      <p class="tagline">Healthy dogs. Happy lives.</p>
+      <p class="sub-tagline">Grooming is care first, beautiful second.</p>
+    </header>
+
+    <div class="cards">
+      <a href="/owner" class="card card--owner">
+        <div class="card-icon">🐶</div>
+        <h2>I'm a pet owner</h2>
+        <p>Find the right groomer for your dog's breed and temperament. Browse real photos with reviews attached. Book in seconds — your dog's health history travels with every appointment.</p>
+        <span class="card-cta">Find a groomer →</span>
+      </a>
+
+      <div class="card card--groomer" id="groomer-card">
+        <div class="card-icon">✂️</div>
+        <h2>I'm a groomer</h2>
+        <p>Manage your schedule, view dog cards before every appointment, and record health observations that build trust with owners. No phone tag. Get paid within 24 hours.</p>
+        <span class="card-cta">Open dashboard →</span>
+      </div>
+    </div>
+
+    <div class="groomer-select" id="groomer-select" style="display:none;">
+      <h3>Select your profile</h3>
+      <div id="groomer-list" class="groomer-list"></div>
+    </div>
+
+    <div class="trust-bar">
+      <span>✓ Fear Free certified groomers</span>
+      <span>✓ Health observations after every groom</span>
+      <span>✓ 15% platform fee — no monthly costs</span>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('groomer-card').addEventListener('click', async () => {
+      const select = document.getElementById('groomer-select');
+      if (select.style.display !== 'none') return;
+
+      const res = await fetch('/api/groomers');
+      const groomers = await res.json();
+      const list = document.getElementById('groomer-list');
+      list.innerHTML = groomers.map(g => `
+        <a href="/groomer/${g.id}" class="groomer-btn">
+          <div class="groomer-btn-name">${g.name}</div>
+          <div class="groomer-btn-meta">${g.business_name} · ⭐ ${g.avg_rating} · ${g.specialization_tags.slice(0,2).join(', ')}</div>
+        </a>
+      `).join('');
+      select.style.display = 'block';
+      select.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: kindpaw
+    env: python
+    rootDir: 07_dog_groomer_booking/marketplace
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true

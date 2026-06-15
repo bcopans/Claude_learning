@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KindPaw — {{ title }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="chat-app">
+
+    <header class="chat-header">
+      <a href="/" class="logo">🐾 KindPaw</a>
+      <div class="chat-title">{{ title }}</div>
+    </header>
+
+    <div class="chat-messages" id="messages"></div>
+
+    <div class="suggestions" id="suggestions">
+      {% if role == 'owner' %}
+        <button class="chip" onclick="useSuggestion(this)">I have a Goldendoodle — what cut styles suit them?</button>
+        <button class="chip" onclick="useSuggestion(this)">Find me a groomer good with anxious dogs in Portland</button>
+        <button class="chip" onclick="useSuggestion(this)">My phone is (503) 555-0101 — show me Max's history</button>
+        <button class="chip" onclick="useSuggestion(this)">Book Max's teddy bear cut with Sarah again</button>
+      {% else %}
+        <button class="chip" onclick="useSuggestion(this)">Pull up the dog card for my next appointment</button>
+        <button class="chip" onclick="useSuggestion(this)">Complete booking KP-A1003 — all clear, no health flags</button>
+        <button class="chip" onclick="useSuggestion(this)">Block 14:00 on 2026-06-20 — I have a personal appointment</button>
+        <button class="chip" onclick="useSuggestion(this)">Show me my reviews</button>
+      {% endif %}
+    </div>
+
+    <div class="chat-input-bar">
+      <input type="text" id="input" placeholder="Type a message…" autocomplete="off">
+      <button id="send-btn" onclick="sendMessage()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    const INITIAL = {{ initial_message | tojson }};
+    const messagesEl = document.getElementById('messages');
+    const inputEl    = document.getElementById('input');
+    const sendBtn    = document.getElementById('send-btn');
+
+    function escapeHtml(text) {
+      return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function addMessage(text, role) {
+      const wrap = document.createElement('div');
+      wrap.className = `msg msg--${role}`;
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      // Convert newlines and basic markdown-ish formatting
+      bubble.innerHTML = escapeHtml(text)
+        .replace(/\n/g, '<br>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>');
+      wrap.appendChild(bubble);
+      messagesEl.appendChild(wrap);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function showTyping() {
+      const wrap = document.createElement('div');
+      wrap.className = 'msg msg--assistant';
+      wrap.id = 'typing';
+      wrap.innerHTML = '<div class="bubble typing"><span></span><span></span><span></span></div>';
+      messagesEl.appendChild(wrap);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function removeTyping() {
+      document.getElementById('typing')?.remove();
+    }
+
+    async function sendMessage(override) {
+      const text = override ?? inputEl.value.trim();
+      if (!text) return;
+      inputEl.value = '';
+
+      // Hide suggestions after first real user message
+      if (!override) {
+        document.getElementById('suggestions').style.display = 'none';
+        addMessage(text, 'user');
+      }
+
+      sendBtn.disabled = true;
+      showTyping();
+
+      try {
+        const res  = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text }),
+        });
+        const data = await res.json();
+        removeTyping();
+        addMessage(data.reply ?? data.error ?? 'Something went wrong.', 'assistant');
+      } catch (e) {
+        removeTyping();
+        addMessage('Connection error — please try again.', 'assistant');
+      }
+
+      sendBtn.disabled = false;
+      inputEl.focus();
+    }
+
+    function useSuggestion(btn) {
+      document.getElementById('suggestions').style.display = 'none';
+      const text = btn.textContent.trim();
+      addMessage(text, 'user');
+      sendMessage(text);
+    }
+
+    inputEl.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(); });
+
+    // Auto-greet on load
+    window.addEventListener('load', () => sendMessage(INITIAL));
+  </script>
+</body>
+</html>
