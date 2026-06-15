@@ -61,6 +61,19 @@
   const GROOMER_ID = {{ groomer_id }};
   let groomerData = null, pendingPortfolioUrl = null, pendingDogId = null;
 
+  // ── localStorage utils ────────────────────────────────────────────────────
+
+  function getUser() {
+    try { return JSON.parse(localStorage.getItem('kindpaw_user') || '{}'); } catch { return {}; }
+  }
+  function saveUser(patch) {
+    const u = getUser();
+    Object.assign(u, patch);
+    localStorage.setItem('kindpaw_user', JSON.stringify(u));
+  }
+
+  const BREEDS = ["Labrador Retriever","Golden Retriever","German Shepherd","Bulldog","Beagle","Poodle","Miniature Poodle","Chihuahua","Boxer","Miniature Schnauzer","Yorkshire Terrier","Dachshund","Shih Tzu","Doberman Pinscher","Great Dane","Siberian Husky","Rottweiler","Australian Shepherd","Border Collie","Cocker Spaniel","Pembroke Welsh Corgi","Maltese","Bichon Frise","Havanese","Shetland Sheepdog","Cavalier King Charles Spaniel","Pomeranian","Boston Terrier","Bernese Mountain Dog","Saint Bernard","Weimaraner","Goldendoodle","Labradoodle","Cavapoo","Cockapoo","Maltipoo","Aussiedoodle","Bernedoodle","Airedale Terrier","Rhodesian Ridgeback","Irish Setter","Samoyed","Whippet"];
+
   // ── Breed → dog.ceo slug ─────────────────────────────────────────────────
 
   const DOG_CEO = {
@@ -214,6 +227,158 @@
     }
   }
 
+  // ── Personalization ───────────────────────────────────────────────────────
+
+  function daysSince(dateStr) {
+    return Math.round((new Date() - new Date(dateStr)) / 86400000);
+  }
+
+  function timeAgo(dateStr) {
+    const d = daysSince(dateStr);
+    if (d < 2)  return 'yesterday';
+    if (d < 7)  return `${d} days ago`;
+    if (d < 30) return `${Math.round(d/7)} week${Math.round(d/7) !== 1 ? 's' : ''} ago`;
+    return `${Math.round(d/30)} month${Math.round(d/30) !== 1 ? 's' : ''} ago`;
+  }
+
+  function sortByBreed(containerSelector, itemSelector, breed) {
+    const container = document.querySelector(containerSelector);
+    if (!container || !breed) return;
+    const q = breed.toLowerCase();
+    const items = [...container.querySelectorAll(itemSelector)];
+    const addCard = container.querySelector('.portfolio-add-card');
+    items.sort((a, b) => {
+      const aM = (a.dataset.breed || '').toLowerCase().includes(q) ? 1 : 0;
+      const bM = (b.dataset.breed || '').toLowerCase().includes(q) ? 1 : 0;
+      return bM - aM;
+    });
+    items.forEach(el => container.appendChild(el));
+    if (addCard) container.appendChild(addCard);
+  }
+
+  function applyBreed(breed) {
+    setTimeout(() => {
+      sortByBreed('#portfolio-grid', '.portfolio-item[data-breed]', breed);
+      sortByBreed('.reviews-list', '.review-item[data-breed]', breed);
+    }, 0);
+  }
+
+  function resetBreed() {
+    const u = getUser();
+    delete u.breed_pref;
+    localStorage.setItem('kindpaw_user', JSON.stringify(u));
+    renderPersonalization(groomerData);
+  }
+
+  function renderPersonalization(g) {
+    const slot = document.getElementById('personal-slot');
+    if (!slot) return;
+
+    const user = getUser();
+    const groomBooking = (user.bookings_by_groomer || {})[GROOMER_ID];
+    const primaryDog = groomBooking
+      ? (user.dogs || []).find(d => d.id === groomBooking.dog_id) || user.dogs?.[0]
+      : user.dogs?.[0];
+    const breed = primaryDog?.breed || user.breed_pref || null;
+    const breedMatch = breed && g.breed_expertise.some(b => b.toLowerCase().includes(breed.toLowerCase()));
+    const fname = user.name ? user.name.split(' ')[0] : null;
+
+    if (user.owner_id && groomBooking) {
+      // Returning customer of this groomer
+      slot.innerHTML = `
+        <div class="personal-card personal-card--returning">
+          <div class="personal-top">
+            <div class="personal-greeting">Welcome back, ${fname} 👋</div>
+            <div class="personal-detail">${groomBooking.dog_name}'s last visit was ${timeAgo(groomBooking.last_date)}</div>
+          </div>
+          <a href="/book/${g.id}" class="btn btn-primary" style="height:38px;padding:0 14px;font-size:0.84rem;white-space:nowrap">Book ${groomBooking.dog_name} again →</a>
+        </div>`;
+      applyBreed(breed);
+
+    } else if (user.owner_id && primaryDog) {
+      // Owner known, first time with this groomer
+      const matchLine = breedMatch
+        ? `<div class="personal-match-line">✓ ${g.name.split(' ')[0]} grooms ${primaryDog.breed}</div>`
+        : `<div class="personal-nomatch-line">Not sure if ${g.name.split(' ')[0]} works with ${primaryDog.breed} — ask via chat</div>`;
+      slot.innerHTML = `
+        <div class="personal-card personal-card--owner">
+          <div class="personal-top">
+            <div class="personal-greeting">Hi ${fname}! Book for ${primaryDog.name}?</div>
+            ${matchLine}
+          </div>
+          <a href="/book/${g.id}" class="btn btn-primary" style="height:38px;padding:0 14px;font-size:0.84rem;white-space:nowrap">Book ${primaryDog.name} →</a>
+        </div>`;
+      applyBreed(breed);
+
+    } else if (breed) {
+      // Breed known, anonymous
+      const cuts = g.cut_specialties.slice(0, 4).join(' · ');
+      const inner = breedMatch
+        ? `<div class="personal-match-yes">
+             <span class="personal-check">✓</span>
+             <div>
+               <div class="personal-match-breed">${g.name.split(' ')[0]} grooms ${breed}</div>
+               ${cuts ? `<div class="personal-match-cuts">${cuts}</div>` : ''}
+             </div>
+           </div>
+           <a href="/book/${g.id}" class="btn btn-primary" style="height:38px;padding:0 14px;font-size:0.84rem;white-space:nowrap">Book →</a>`
+        : `<div class="personal-match-no">${g.name.split(' ')[0]} may not list ${breed} — <button class="link-btn" onclick="resetBreed()">try another breed</button></div>
+           <a href="/book/${g.id}" class="btn btn-outline" style="height:38px;padding:0 14px;font-size:0.84rem;white-space:nowrap">Ask anyway →</a>`;
+      slot.innerHTML = `<div class="personal-card personal-card--match">${inner}</div>`;
+      applyBreed(breed);
+
+    } else {
+      // Cold — show breed input
+      slot.innerHTML = `
+        <div class="personal-card personal-card--cold">
+          <div class="personal-prompt">What breed is your dog?</div>
+          <div class="ac-wrap">
+            <input class="input" type="text" id="breed-input" placeholder="e.g. Goldendoodle" autocomplete="off" style="height:44px">
+          </div>
+        </div>`;
+
+      setTimeout(() => {
+        const input = document.getElementById('breed-input');
+        if (!input) return;
+        const wrap = input.closest('.ac-wrap');
+        const dd = document.createElement('div');
+        dd.className = 'ac-dropdown';
+        dd.style.display = 'none';
+        wrap.appendChild(dd);
+
+        function renderDd(val) {
+          const q = val.toLowerCase().trim();
+          if (!q) { dd.style.display = 'none'; return; }
+          const hits = BREEDS.filter(b => b.toLowerCase().includes(q)).slice(0, 8);
+          dd.innerHTML = hits.map(h => `<div class="ac-item" data-v="${h}">${h}</div>`).join('');
+          dd.style.display = hits.length ? 'block' : 'none';
+        }
+
+        function commit(val) {
+          if (!val) return;
+          saveUser({ breed_pref: val });
+          renderPersonalization(g);
+        }
+
+        input.addEventListener('input', e => renderDd(e.target.value));
+        input.addEventListener('keydown', e => {
+          const focused = dd.querySelector('.ac-item.focused');
+          const items = [...dd.querySelectorAll('.ac-item')];
+          if (e.key === 'ArrowDown') { e.preventDefault(); const n = focused ? (items[items.indexOf(focused)+1]||items[0]) : items[0]; focused?.classList.remove('focused'); n?.classList.add('focused'); }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); const p = focused ? (items[items.indexOf(focused)-1]||items[items.length-1]) : items[items.length-1]; focused?.classList.remove('focused'); p?.classList.add('focused'); }
+          else if (e.key === 'Enter') { const v = focused ? focused.dataset.v : input.value.trim(); if (v) { dd.style.display = 'none'; commit(v); } }
+          else if (e.key === 'Escape') { dd.style.display = 'none'; }
+        });
+        dd.addEventListener('mousedown', e => {
+          const item = e.target.closest('.ac-item');
+          if (!item) return;
+          e.preventDefault(); input.value = item.dataset.v; dd.style.display = 'none'; commit(item.dataset.v);
+        });
+        document.addEventListener('click', e => { if (!wrap.contains(e.target)) dd.style.display = 'none'; });
+      }, 0);
+    }
+  }
+
   // ── Main load ─────────────────────────────────────────────────────────────
 
   async function load() {
@@ -249,7 +414,7 @@
     `).join('');
 
     const portfolioItems = g.portfolio.length ? g.portfolio.map((p, i) => `
-      <div class="portfolio-item">
+      <div class="portfolio-item" data-breed="${p.breed || ''}">
         <div class="portfolio-img-wrap" id="pimg-${i}">
           ${p.photo_url
             ? `<img src="${p.photo_url}" class="portfolio-img" alt="${p.breed || ''}">`
@@ -267,7 +432,7 @@
     `).join('') : '';
 
     const reviews = g.reviews.length ? g.reviews.map(r => `
-      <div class="review-item">
+      <div class="review-item" data-breed="${r.breed || ''}">
         <div class="review-top">
           <span class="stars">${'★'.repeat(r.rating)}</span>
           <span class="review-meta">${r.owner_name} · ${r.dog_name} (${r.breed})${r.cut_style ? ` · ${r.cut_style}` : ''}</span>
@@ -293,6 +458,8 @@
           <div class="gprofile-certs">${certs}</div>
         </div>
       </div>
+
+      <div id="personal-slot"></div>
 
       <div class="gprofile-bio">${g.bio}</div>
 
@@ -328,6 +495,8 @@
         <div class="reviews-list">${reviews}</div>
       </div>
     `;
+
+    renderPersonalization(g);
 
     // Async-load breed photos for portfolio items with no uploaded photo
     g.portfolio.forEach(async (p, i) => {

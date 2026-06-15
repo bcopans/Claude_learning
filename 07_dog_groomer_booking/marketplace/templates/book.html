@@ -257,6 +257,9 @@
     }
 
     owner = data.owner;
+    // Persist owner for personalization
+    const _eu = JSON.parse(localStorage.getItem('kindpaw_user') || '{}');
+    localStorage.setItem('kindpaw_user', JSON.stringify({..._eu, owner_id: data.owner.id, name: data.owner.name, phone: data.owner.phone, breed_pref: data.dogs[0]?.breed || _eu.breed_pref, dogs: data.dogs.map(d => ({id:d.id, name:d.name, breed:d.breed, photo_url:d.photo_url||''}))}));
     renderDogs(data.dogs);
     goStep(2);
   }
@@ -468,6 +471,15 @@
       <div class="confirm-row"><span>Date &amp; time</span><strong>${selectedDate} at ${timeLabel}</strong></div>
       <div class="confirm-row"><span>Deposit</span><strong>$${dep}</strong></div>
     `;
+    // Persist owner + booking to localStorage for groomer profile personalization
+    const _u = JSON.parse(localStorage.getItem('kindpaw_user') || '{}');
+    const _dogs = _u.dogs || [];
+    const _idx = _dogs.findIndex(d => d.id === selectedDog.id);
+    const _dogEntry = {id: selectedDog.id, name: selectedDog.name, breed: selectedDog.breed, photo_url: ''};
+    if (_idx >= 0) _dogs[_idx] = _dogEntry; else _dogs.push(_dogEntry);
+    const _bookings = _u.bookings_by_groomer || {};
+    _bookings[GROOMER_ID] = {last_date: selectedDate, dog_name: selectedDog.name, dog_id: selectedDog.id, breed: selectedDog.breed};
+    localStorage.setItem('kindpaw_user', JSON.stringify({..._u, owner_id: owner.id, name: owner.name, phone: owner.phone, breed_pref: selectedDog.breed, dogs: _dogs, bookings_by_groomer: _bookings}));
     goStep('success');
   }
 

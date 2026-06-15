@@ -995,6 +995,43 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
 .not-found { text-align: center; padding: 40px; color: var(--muted); }
 .not-found a { color: var(--green); }
 
+/* ── Personalization card ── */
+.personal-card {
+  margin: 12px 16px 0;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  padding: 16px;
+}
+.personal-card--cold .personal-prompt {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.personal-card--match,
+.personal-card--owner,
+.personal-card--returning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.personal-card--match    { border-color: var(--green); background: var(--green-light); }
+.personal-card--owner    { border-color: var(--green); background: var(--green-light); }
+.personal-card--returning { border-color: #F59E0B; background: #FFFBEB; }
+.personal-top    { flex: 1; min-width: 0; }
+.personal-greeting { font-weight: 700; font-size: 0.92rem; margin-bottom: 2px; }
+.personal-detail   { color: var(--muted); font-size: 0.8rem; }
+.personal-match-yes { display: flex; align-items: flex-start; gap: 8px; flex: 1; min-width: 0; }
+.personal-check     { color: var(--green); font-weight: 700; font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+.personal-match-breed { font-weight: 700; font-size: 0.9rem; }
+.personal-match-cuts  { color: var(--green); font-size: 0.78rem; margin-top: 2px; font-weight: 500; }
+.personal-match-line  { color: var(--green); font-size: 0.8rem; font-weight: 600; margin-top: 2px; }
+.personal-nomatch-line { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+.personal-match-no  { flex: 1; color: var(--muted); font-size: 0.85rem; }
+
 /* ── Avatar upload overlay ── */
 .avatar-upload-wrap {
   position: relative;
