@@ -25,10 +25,15 @@ APIs:
 
 import json
 import os
+import secrets
 import sys
+import urllib.parse
 import uuid
+from datetime import timedelta
 
-from flask import Flask, Response, jsonify, render_template, request, session, stream_with_context
+import requests as http_client
+from flask import Flask, Response, jsonify, redirect, render_template, request, session, stream_with_context, url_for
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -38,7 +43,13 @@ import groomer_bot
 from stream_utils import stream_chat
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-kindpaw-change-in-prod")
+app.permanent_session_lifetime = timedelta(days=30)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+GOOGLE_AUTH_URL     = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL    = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 bootstrap()
 
@@ -56,6 +67,16 @@ def _add_photo_columns():
                 pass  # column already exists
 
 _add_photo_columns()
+
+def _add_auth_columns():
+    with get_conn() as conn:
+        try:
+            conn.execute("ALTER TABLE owners ADD COLUMN google_id TEXT DEFAULT ''")
+            conn.commit()
+        except Exception:
+            pass
+
+_add_auth_columns()
 
 UPLOAD_DIR      = os.path.join(os.path.dirname(__file__), "static", "uploads")
 ALLOWED_EXTS    = {"png", "jpg", "jpeg", "gif", "webp"}
@@ -141,6 +162,174 @@ def mockup_expertise():
 
 
 conversations: dict = {}
+
+
+# ─── Google OAuth ────────────────────────────────────────────────────────────
+
+@app.route("/auth/google")
+def auth_google():
+    state = secrets.token_urlsafe(16)
+    session["oauth_state"] = state
+    redirect_uri = url_for("auth_google_callback", _external=True)
+    params = {
+        "client_id":     os.environ.get("GOOGLE_CLIENT_ID", ""),
+        "redirect_uri":  redirect_uri,
+        "response_type": "code",
+        "scope":         "openid email profile",
+        "state":         state,
+        "access_type":   "online",
+    }
+    return redirect(GOOGLE_AUTH_URL + "?" + urllib.parse.urlencode(params))
+
+
+@app.route("/auth/google/callback")
+def auth_google_callback():
+    if request.args.get("error"):
+        return redirect("/?error=" + request.args["error"])
+    if request.args.get("state") != session.get("oauth_state"):
+        return redirect("/?error=state_mismatch")
+
+    code         = request.args.get("code", "")
+    redirect_uri = url_for("auth_google_callback", _external=True)
+
+    token_resp = http_client.post(GOOGLE_TOKEN_URL, data={
+        "code":          code,
+        "client_id":     os.environ.get("GOOGLE_CLIENT_ID", ""),
+        "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+        "redirect_uri":  redirect_uri,
+        "grant_type":    "authorization_code",
+    }, timeout=10)
+    token_data = token_resp.json()
+    if "error" in token_data:
+        return redirect("/?error=token_exchange_failed")
+
+    userinfo = http_client.get(GOOGLE_USERINFO_URL, headers={
+        "Authorization": f"Bearer {token_data['access_token']}"
+    }, timeout=10).json()
+
+    google_id = userinfo.get("sub")
+    email     = userinfo.get("email", "")
+    name      = userinfo.get("name", "")
+    if not google_id:
+        return redirect("/?error=no_user_info")
+
+    with get_conn() as conn:
+        owner = conn.execute("SELECT * FROM owners WHERE google_id=?", (google_id,)).fetchone()
+
+        if not owner and email:
+            owner = conn.execute("SELECT * FROM owners WHERE email=?", (email,)).fetchone()
+            if owner:
+                conn.execute("UPDATE owners SET google_id=? WHERE id=?", (google_id, owner["id"]))
+                conn.commit()
+
+        if not owner:
+            phone_placeholder = f"google_{google_id[:20]}"
+            conn.execute(
+                "INSERT INTO owners (name, email, google_id, phone) VALUES (?,?,?,?)",
+                (name, email, google_id, phone_placeholder),
+            )
+            conn.commit()
+            owner = conn.execute("SELECT * FROM owners WHERE google_id=?", (google_id,)).fetchone()
+
+    session.permanent = True
+    session["owner_id"] = owner["id"]
+    session["name"]     = owner["name"]
+    session["email"]    = email
+    return redirect("/profile")
+
+
+@app.route("/auth/logout")
+def auth_logout():
+    session.clear()
+    return redirect("/")
+
+
+# ─── Current user API ────────────────────────────────────────────────────────
+
+@app.route("/api/me")
+def api_me():
+    owner_id = session.get("owner_id")
+    if not owner_id:
+        return jsonify({"logged_in": False}), 401
+    with get_conn() as conn:
+        owner = conn.execute("SELECT * FROM owners WHERE id=?", (owner_id,)).fetchone()
+        if not owner:
+            session.clear()
+            return jsonify({"logged_in": False}), 401
+        dogs = conn.execute(
+            "SELECT id, name, breed, age_years, temperament_tags, photo_url FROM dogs WHERE owner_id=?",
+            (owner_id,)
+        ).fetchall()
+        bookings = conn.execute("""
+            SELECT b.id, b.date, b.time, b.status, b.cut_style, b.total_price,
+                   d.name AS dog_name, d.breed,
+                   g.id AS groomer_id, g.name AS groomer_name, g.business_name,
+                   s.name AS service_name
+            FROM bookings b
+            JOIN dogs d ON b.dog_id = d.id
+            JOIN groomers g ON b.groomer_id = g.id
+            JOIN services s ON b.service_id = s.id
+            WHERE b.owner_id=? ORDER BY b.date DESC, b.time DESC LIMIT 30
+        """, (owner_id,)).fetchall()
+    return jsonify({
+        "logged_in": True,
+        "owner":    {"id": owner["id"], "name": owner["name"], "email": owner["email"] or ""},
+        "dogs":     [{**dict(d), "temperament_tags": json.loads(d["temperament_tags"]), "photo_url": d["photo_url"] or ""} for d in dogs],
+        "bookings": [dict(b) for b in bookings],
+    })
+
+
+# ─── Booking management ───────────────────────────────────────────────────────
+
+@app.route("/api/booking/<booking_id>/cancel", methods=["POST"])
+def api_cancel_booking(booking_id):
+    owner_id = session.get("owner_id")
+    if not owner_id:
+        return jsonify({"error": "Not logged in"}), 401
+    with get_conn() as conn:
+        b = conn.execute("SELECT * FROM bookings WHERE id=? AND owner_id=?", (booking_id, owner_id)).fetchone()
+        if not b:
+            return jsonify({"error": "Not found"}), 404
+        if b["status"] != "confirmed":
+            return jsonify({"error": f"Booking is already {b['status']}"}), 400
+        conn.execute("UPDATE bookings SET status='cancelled' WHERE id=?", (booking_id,))
+        conn.execute(
+            "UPDATE availability SET is_booked=0 WHERE groomer_id=? AND date=? AND time_slot=?",
+            (b["groomer_id"], b["date"], b["time"])
+        )
+        conn.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/api/booking/<booking_id>/reschedule", methods=["POST"])
+def api_reschedule_booking(booking_id):
+    owner_id = session.get("owner_id")
+    if not owner_id:
+        return jsonify({"error": "Not logged in"}), 401
+    data     = request.json or {}
+    new_date = data.get("date", "").strip()
+    new_time = data.get("time", "").strip()
+    if not new_date or not new_time:
+        return jsonify({"error": "Date and time required"}), 400
+    with get_conn() as conn:
+        b = conn.execute("SELECT * FROM bookings WHERE id=? AND owner_id=?", (booking_id, owner_id)).fetchone()
+        if not b:
+            return jsonify({"error": "Not found"}), 404
+        if b["status"] != "confirmed":
+            return jsonify({"error": f"Cannot reschedule a {b['status']} booking"}), 400
+        slot = conn.execute(
+            "SELECT * FROM availability WHERE groomer_id=? AND date=? AND time_slot=? AND is_booked=0",
+            (b["groomer_id"], new_date, new_time)
+        ).fetchone()
+        if not slot:
+            return jsonify({"error": "That slot is not available"}), 400
+        conn.execute("UPDATE availability SET is_booked=0 WHERE groomer_id=? AND date=? AND time_slot=?",
+                     (b["groomer_id"], b["date"], b["time"]))
+        conn.execute("UPDATE availability SET is_booked=1 WHERE groomer_id=? AND date=? AND time_slot=?",
+                     (b["groomer_id"], new_date, new_time))
+        conn.execute("UPDATE bookings SET date=?, time=? WHERE id=?", (new_date, new_time, booking_id))
+        conn.commit()
+    return jsonify({"success": True})
 
 
 # ─── Data APIs ───────────────────────────────────────────────────────────────

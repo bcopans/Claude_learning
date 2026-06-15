@@ -1335,3 +1335,312 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
   .suggestions::-webkit-scrollbar { display: none; }
   .chip           { flex-shrink: 0; }
 }
+
+/* ─────────────────────────────────────────────
+   PROFILE PAGE — auth & bookings
+───────────────────────────────────────────── */
+.profile-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.profile-auth {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh);
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.profile-auth h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.profile-auth p {
+  color: var(--muted);
+  margin-bottom: 24px;
+  font-size: 0.95rem;
+}
+
+.btn-google {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 9999px;
+  padding: 11px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  transition: box-shadow 0.15s, border-color 0.15s;
+  cursor: pointer;
+}
+
+.btn-google:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.13);
+  border-color: #C5C5C5;
+}
+
+.btn-google svg {
+  flex-shrink: 0;
+}
+
+.profile-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--subtle);
+  font-size: 0.85rem;
+}
+
+.profile-divider::before,
+.profile-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Logged-in profile header */
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.profile-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--green-light);
+  color: var(--green-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.profile-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.profile-meta {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Booking cards */
+.booking-section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 24px 0 10px;
+}
+
+.booking-card {
+  background: var(--surface);
+  border-radius: var(--r);
+  box-shadow: var(--sh);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.booking-card--past {
+  opacity: 0.75;
+}
+
+.booking-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.booking-groomer {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.booking-price {
+  font-weight: 700;
+  color: var(--green-dark);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.booking-detail {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.booking-status {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 9999px;
+  background: #F0FDF4;
+  color: var(--green-dark);
+  border: 1px solid #BBF7D0;
+}
+
+.booking-status--cancelled {
+  background: #FEF2F2;
+  color: #B91C1C;
+  border-color: #FECACA;
+}
+
+.booking-status--completed {
+  background: #F9FAFB;
+  color: var(--muted);
+  border-color: var(--border);
+}
+
+.booking-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn-action {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  text-align: center;
+}
+
+.btn-action:hover {
+  background: var(--bg);
+}
+
+.btn-action--reschedule {
+  border-color: var(--green);
+  color: var(--green-dark);
+}
+
+.btn-action--reschedule:hover {
+  background: var(--green-light);
+}
+
+.btn-action--cancel {
+  border-color: #FECACA;
+  color: #B91C1C;
+}
+
+.btn-action--cancel:hover {
+  background: #FEF2F2;
+}
+
+/* Reschedule modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+@media (min-width: 480px) {
+  .modal-backdrop {
+    align-items: center;
+  }
+}
+
+.modal-sheet {
+  background: var(--surface);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  width: 100%;
+  max-width: 520px;
+  padding: 24px 20px 32px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+@media (min-width: 480px) {
+  .modal-sheet {
+    border-radius: var(--r-lg);
+  }
+}
+
+.modal-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.modal-close {
+  float: right;
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: var(--muted);
+  line-height: 1;
+  margin-top: -2px;
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin: 12px 0 20px;
+}
+
+.slot-btn {
+  padding: 10px 8px;
+  border-radius: var(--r);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  text-align: center;
+}
+
+.slot-btn.selected {
+  border-color: var(--green);
+  background: var(--green-light);
+  color: var(--green-dark);
+  font-weight: 600;
+}
+
+.slot-btn:hover:not(.selected) {
+  border-color: #9CA3AF;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}

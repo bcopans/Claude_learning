@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS owners (
     name       TEXT NOT NULL,
     phone      TEXT NOT NULL UNIQUE,
     email      TEXT DEFAULT '',
+    google_id  TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now'))
 );
 
