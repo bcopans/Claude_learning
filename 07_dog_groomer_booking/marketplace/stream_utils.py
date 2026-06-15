@@ -78,6 +78,15 @@ def stream_chat(messages: list, system: str, tools: list, run_tool_fn):
                         "tool_use_id": block.id,
                         "content":     result,
                     })
+                    # Emit context when owner is identified so the UI can show personalised chips
+                    if block.name == "find_owner":
+                        parsed = json.loads(result)
+                        if parsed.get("found"):
+                            yield ("context", json.dumps({
+                                "type":  "owner_identified",
+                                "name":  parsed["name"],
+                                "dogs":  parsed["dogs"],
+                            }))
 
                 messages.append({"role": "user", "content": tool_results})
 
