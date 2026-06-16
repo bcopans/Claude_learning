@@ -107,30 +107,43 @@
     return '★'.repeat(f) + (h ? '½' : '') + '☆'.repeat(5 - f - h);
   }
 
+  function avatarBg(name) {
+    const palette = ['#16A34A','#2563EB','#7C3AED','#DB2777','#D97706','#0891B2','#059669'];
+    let h = 0; for (const c of name) h = ((h << 5) - h) + c.charCodeAt(0);
+    return palette[Math.abs(h) % palette.length];
+  }
+
   function renderCard(g) {
     const specs = g.specialization_tags.slice(0, 2).map(s => `<span class="tag">${s}</span>`).join('');
     const certs = g.certification_tags.slice(0, 2).map(c => `<span class="cert-badge">${c}</span>`).join('');
+    const avatarStyle = g.photo_url ? '' : `style="background:${avatarBg(g.name)}"`;
     const avatar = g.photo_url ? `<img src="${g.photo_url}" alt="${g.name}">` : g.name.charAt(0);
+    const coverHtml = g.cover_photo_url
+      ? `<div class="gcard-cover"><img src="${g.cover_photo_url}" alt=""></div>`
+      : '';
     return `
-      <div class="groomer-card" onclick="location.href='/groomer/${g.id}/profile'" style="cursor:pointer">
-        <div class="gcard-avatar">${avatar}</div>
-        <div class="gcard-body">
-          <div class="gcard-top">
-            <div>
-              <div class="gcard-name">${g.name}</div>
-              <div class="gcard-biz">${g.business_name} · ${g.location}</div>
+      <div class="groomer-card${g.cover_photo_url ? ' groomer-card--has-cover' : ''}" onclick="location.href='/groomer/${g.id}/profile'" style="cursor:pointer">
+        ${coverHtml}
+        <div class="gcard-main">
+          <div class="gcard-avatar" ${avatarStyle}>${avatar}</div>
+          <div class="gcard-body">
+            <div class="gcard-top">
+              <div>
+                <div class="gcard-name">${g.name}</div>
+                <div class="gcard-biz">${g.business_name} · ${g.location}</div>
+              </div>
+              <div class="gcard-rating">
+                <span class="stars">${stars(g.avg_rating)}</span>
+                <span class="rating-val">${g.avg_rating}</span>
+                <span class="rating-cnt">(${g.total_reviews})</span>
+              </div>
             </div>
-            <div class="gcard-rating">
-              <span class="stars">${stars(g.avg_rating)}</span>
-              <span class="rating-val">${g.avg_rating}</span>
-              <span class="rating-cnt">(${g.total_reviews})</span>
+            <p class="gcard-bio">${g.bio.slice(0, 90)}…</p>
+            <div class="gcard-tags">${specs}${certs}</div>
+            <div class="gcard-footer">
+              <span class="gcard-price">From $${g.starting_from}</span>
+              <a href="/groomer/${g.id}/profile" class="btn btn-primary" style="height:34px;padding:0 14px;font-size:0.8rem" onclick="event.stopPropagation()">Book →</a>
             </div>
-          </div>
-          <p class="gcard-bio">${g.bio.slice(0, 100)}…</p>
-          <div class="gcard-tags">${specs}${certs}</div>
-          <div class="gcard-footer">
-            <span class="gcard-price">From $${g.starting_from}</span>
-            <a href="/groomer/${g.id}/profile" class="btn btn-primary" style="height:34px;padding:0 14px;font-size:0.8rem" onclick="event.stopPropagation()">Book →</a>
           </div>
         </div>
       </div>`;

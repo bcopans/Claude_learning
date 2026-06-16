@@ -397,9 +397,22 @@
       + (breedAll.length > 5 ? `<span class="tag tag--gray">+${breedAll.length - 5} more</span>` : '');
     const cuts   = g.cut_specialties.map(c => `<span class="tag tag--blue">${c}</span>`).join('');
 
+    function avatarBg(name) {
+      const palette = ['#16A34A','#2563EB','#7C3AED','#DB2777','#D97706','#0891B2','#059669'];
+      let h = 0; for (const c of name) h = ((h << 5) - h) + c.charCodeAt(0);
+      return palette[Math.abs(h) % palette.length];
+    }
+
     const avatarInner = g.photo_url
       ? `<img src="${g.photo_url}" class="avatar-photo" alt="${g.name}">`
       : g.name.charAt(0);
+    const avatarStyle = g.photo_url ? '' : `style="background:${avatarBg(g.name)}"`;
+
+    const trustBadges = [
+      g.total_reviews >= 20 ? `<span class="trust-badge trust-badge--star">Top rated</span>` : '',
+      g.certification_tags.length ? `<span class="trust-badge">Certified</span>` : '',
+      `<span class="trust-badge">${g.total_reviews} grooms</span>`,
+    ].filter(Boolean).join('');
 
     const services = g.services.map(s => `
       <div class="service-row">
@@ -420,9 +433,9 @@
         <div class="portfolio-img-wrap" id="pimg-${i}">
           ${p.photo_url
             ? `<img src="${p.photo_url}" class="portfolio-img" alt="${p.breed || ''}">`
-            : `<div class="portfolio-img-placeholder">
-                <span class="portfolio-label">${p.cut_style || 'groom'}</span>
-                <span class="portfolio-breed">${p.breed || ''}</span>
+            : `<div class="portfolio-img-placeholder" id="pimg-${i}">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5.172C10 3.782 8.423 2.457 6.5 3c-2.623.756-3.033 3.204-3 4 .034.796.082 1 .5 1.5C4.826 9.451 6 9.5 6 9.5h2.5A1.5 1.5 0 0 0 10 8V5.172z"/><path d="M14.267 5.172c0-1.39 1.577-2.715 3.5-2.172 2.623.756 3.033 3.204 3 4-.034.796-.082 1-.5 1.5-.826.951-2 1-2 1h-2.5a1.5 1.5 0 0 1-1.5-1.5V5.172z"/><path d="M6 9.5v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/><path d="M9 9.5v3"/><path d="M15 9.5v3"/></svg>
+                <span class="portfolio-breed" style="font-size:0.72rem;color:#9CA3AF;margin-top:4px">${p.breed || p.cut_style || 'Photo coming'}</span>
                </div>`}
         </div>
         ${p.rating ? `<div class="portfolio-review">
@@ -436,8 +449,11 @@
     const reviews = g.reviews.length ? g.reviews.map(r => `
       <div class="review-item" data-breed="${r.breed || ''}">
         <div class="review-top">
-          <span class="stars">${'★'.repeat(r.rating)}</span>
-          <span class="review-meta">${r.owner_name} · ${r.dog_name} (${r.breed})${r.cut_style ? ` · ${r.cut_style}` : ''}</span>
+          <div class="review-avatar" style="background:${avatarBg(r.owner_name)}">${r.owner_name.charAt(0)}</div>
+          <div>
+            <div style="font-weight:600;font-size:0.88rem">${r.owner_name} <span style="color:var(--muted);font-weight:400">· ${r.dog_name}${r.breed ? ` (${r.breed})` : ''}</span></div>
+            <span class="stars" style="font-size:0.75rem">${'★'.repeat(r.rating)}</span>
+          </div>
         </div>
         <p class="review-text">"${r.review_text}"</p>
       </div>
@@ -446,7 +462,7 @@
     document.getElementById('content').innerHTML = `
       <div class="gprofile-hero">
         <div class="avatar-upload-wrap" onclick="triggerAvatarUpload()" title="Update profile photo">
-          <div class="gprofile-avatar" id="groomer-avatar">${avatarInner}</div>
+          <div class="gprofile-avatar" id="groomer-avatar" ${avatarStyle}>${avatarInner}</div>
           <div class="avatar-upload-btn">📷</div>
         </div>
         <div class="gprofile-info">
@@ -455,9 +471,9 @@
           <div class="gprofile-rating">
             <span class="stars">${stars(g.avg_rating)}</span>
             <strong>${g.avg_rating}</strong>
-            <span class="rating-cnt">${g.total_reviews} grooms</span>
           </div>
-          <div class="gprofile-certs">${certs}</div>
+          <div class="trust-badges">${trustBadges}</div>
+          ${certs ? `<div class="gprofile-certs" style="margin-top:6px">${certs}</div>` : ''}
         </div>
       </div>
 

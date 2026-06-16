@@ -549,6 +549,59 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
 /* ── Groomer card photo support ── */
 .gcard-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
 
+/* ── Search card cover photo ── */
+.groomer-card--has-cover { flex-direction: column; padding: 0; overflow: hidden; }
+.gcard-cover { width: 100%; height: 140px; overflow: hidden; }
+.gcard-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gcard-main { display: flex; gap: 16px; padding: 16px; }
+.groomer-card:not(.groomer-card--has-cover) .gcard-main { display: contents; }
+
+/* ── Trust badges ── */
+.trust-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.trust-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #F9FAFB;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.trust-badge--star {
+  background: #FFFBEB;
+  color: #92400E;
+  border-color: #FDE68A;
+}
+
+/* ── Reviewer avatar ── */
+.review-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.review-top { align-items: flex-start; gap: 10px; }
+
+/* ── Portfolio placeholder (neutral, not green) ── */
+.portfolio-img-placeholder {
+  background: #F1F5F9;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
 /* ── Real dog photos in portfolio ── */
 .portfolio-img-wrap { height: 140px; overflow: hidden; }
 .portfolio-img {

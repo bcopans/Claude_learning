@@ -343,6 +343,10 @@ def api_groomers():
             min_price = conn.execute(
                 "SELECT MIN(price) as p FROM services WHERE groomer_id=?", (g["id"],)
             ).fetchone()["p"]
+            cover = conn.execute(
+                "SELECT photo_url FROM portfolio WHERE groomer_id=? AND photo_url!='' ORDER BY id LIMIT 1",
+                (g["id"],)
+            ).fetchone()
             result.append({
                 "id":                  g["id"],
                 "name":                g["name"],
@@ -359,6 +363,7 @@ def api_groomers():
                 "lat":                 g["lat"] if g["lat"] else 0,
                 "lng":                 g["lng"] if g["lng"] else 0,
                 "photo_url":           g["photo_url"] or "",
+                "cover_photo_url":     cover["photo_url"] if cover else "",
             })
     return jsonify(result)
 
