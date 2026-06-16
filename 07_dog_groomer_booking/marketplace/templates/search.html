@@ -20,35 +20,25 @@
   <p>Every groomer is verified, certified, and care-first.</p>
 </div>
 
-<!-- Filter strip -->
-<div class="filter-strip">
-  <div class="filter-breed-pill ac-wrap" id="breed-pill">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#6B7280"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input type="text" id="breed-filter" placeholder="Breed" autocomplete="off">
-    <button class="breed-clear" id="breed-x" onclick="clearBreed()" style="display:none" aria-label="Clear breed">×</button>
+<!-- NL search bar -->
+<div class="nl-bar">
+  <div class="nl-input-row">
+    <svg class="nl-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="nl-input" class="nl-input" placeholder='Try "teddy bear cuts for poodles"' autocomplete="off">
+    <button class="nl-mic" id="mic-btn" onclick="startVoice()" title="Voice search" aria-label="Voice search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    </button>
+    <button class="nl-clear-btn" id="nl-clear" onclick="clearAll()" style="display:none" aria-label="Clear search">×</button>
   </div>
-  <div class="filter-sep"></div>
-  <div class="filter-chips-scroll">
-    <button class="fchip" data-value="anxious dogs" onclick="toggleChip(this)">Anxious dogs</button>
-    <button class="fchip" data-value="puppies"      onclick="toggleChip(this)">Puppies</button>
-    <button class="fchip" data-value="senior dogs"  onclick="toggleChip(this)">Senior dogs</button>
-    <button class="fchip" data-value="teddy bear"   onclick="toggleChip(this)">Teddy bear</button>
-    <button class="fchip" data-value="puppy cut"    onclick="toggleChip(this)">Puppy cut</button>
-    <button class="fchip" data-value="show cuts"    onclick="toggleChip(this)">Show cuts</button>
-    <button class="fchip" data-value="deshed"       onclick="toggleChip(this)">Deshed</button>
-    <button class="fchip" data-value="hand-strip"   onclick="toggleChip(this)">Hand strip</button>
-  </div>
+  <div class="active-pills" id="active-pills" style="display:none"></div>
 </div>
 
 <!-- Results bar + view toggle -->
 <div class="results-bar">
   <span id="result-count"></span>
-  <div style="display:flex;gap:8px;align-items:center">
-    <button class="clear-btn" id="clear-btn" onclick="clearFilters()" style="display:none">Clear filters</button>
-    <div class="view-toggle">
-      <button class="vtab vtab--active" id="tab-list" onclick="setView('list')">≡ List</button>
-      <button class="vtab" id="tab-map"  onclick="setView('map')">⊕ Map</button>
-    </div>
+  <div class="view-toggle">
+    <button class="vtab vtab--active" id="tab-list" onclick="setView('list')">≡ List</button>
+    <button class="vtab" id="tab-map"  onclick="setView('map')">⊕ Map</button>
   </div>
 </div>
 
@@ -62,51 +52,54 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  let allGroomers = [], filteredGroomers = [], map = null, markers = [];
+  let allGroomers = [], filteredGroomers = [], map = null, markers = [], recognition = null;
+
   const BREEDS = ["Labrador Retriever","Golden Retriever","German Shepherd","Bulldog","Beagle","Poodle","Miniature Poodle","Chihuahua","Boxer","Miniature Schnauzer","Yorkshire Terrier","Dachshund","Shih Tzu","Doberman Pinscher","Great Dane","Siberian Husky","Rottweiler","Australian Shepherd","Border Collie","Cocker Spaniel","Pembroke Welsh Corgi","Maltese","Bichon Frise","Havanese","Shetland Sheepdog","Cavalier King Charles Spaniel","Pomeranian","Boston Terrier","Bernese Mountain Dog","Saint Bernard","Weimaraner","Goldendoodle","Labradoodle","Cavapoo","Cockapoo","Maltipoo","Aussiedoodle","Bernedoodle","Airedale Terrier","Rhodesian Ridgeback","Belgian Malinois","Italian Greyhound","Whippet","Basenji","Bloodhound","Basset Hound","Irish Setter","Samoyed"];
 
-  function makeAutocomplete(input, options, onSelect) {
-    const wrap = input.closest('.ac-wrap') || input.parentNode;
-    const dd = document.createElement('div');
-    dd.className = 'ac-dropdown';
-    dd.style.display = 'none';
-    wrap.appendChild(dd);
+  const BREED_ALIASES = {
+    'pom':'Pomeranian','poms':'Pomeranian',
+    'golden':'Golden Retriever','goldens':'Golden Retriever','goldie':'Golden Retriever','goldies':'Golden Retriever',
+    'lab':'Labrador Retriever','labs':'Labrador Retriever',
+    'doodle':'Goldendoodle','doodles':'Goldendoodle',
+    'yorkie':'Yorkshire Terrier','yorkies':'Yorkshire Terrier',
+    'husky':'Siberian Husky','huskies':'Siberian Husky',
+    'corgi':'Pembroke Welsh Corgi','corgis':'Pembroke Welsh Corgi',
+    'aussie':'Australian Shepherd','aussies':'Australian Shepherd',
+    'bichon':'Bichon Frise',
+    'schnauzer':'Miniature Schnauzer','schnauzers':'Miniature Schnauzer',
+    'doxie':'Dachshund','doxies':'Dachshund','weenie':'Dachshund','wiener':'Dachshund',
+    'cocker':'Cocker Spaniel',
+    'bernese':'Bernese Mountain Dog','berner':'Bernese Mountain Dog','berners':'Bernese Mountain Dog',
+    'sheltie':'Shetland Sheepdog','shelties':'Shetland Sheepdog',
+    'maltipoo':'Maltipoo','cavapoo':'Cavapoo','labradoodle':'Labradoodle',
+    'cockapoo':'Cockapoo','aussiedoodle':'Aussiedoodle','bernedoodle':'Bernedoodle',
+  };
 
-    function render(val) {
-      const q = val.toLowerCase().trim();
-      if (!q) { dd.style.display = 'none'; return; }
-      const hits = options.filter(o => o.toLowerCase().includes(q)).slice(0, 8);
-      if (!hits.length) { dd.style.display = 'none'; return; }
-      dd.innerHTML = hits.map(h => `<div class="ac-item" data-v="${h}">${h}</div>`).join('');
-      dd.style.display = 'block';
+  // Ordered multi-word first so "puppy cut" matches before "puppy"
+  const SPEC_KEYWORDS = [
+    ['teddy bear','teddy bear'],['puppy cut','puppy cut'],
+    ['show cut','show cuts'],['show cuts','show cuts'],['competition cut','show cuts'],
+    ['hand strip','hand-strip'],['hand-strip','hand-strip'],['hand stripping','hand-strip'],['hand stripped','hand-strip'],
+    ['anxious','anxious dogs'],['nervous','anxious dogs'],['scared','anxious dogs'],['anxiety','anxious dogs'],
+    ['senior','senior dogs'],['older dog','senior dogs'],['old dog','senior dogs'],
+    ['puppy','puppies'],['pup','puppies'],
+    ['deshed','deshed'],['de-shed','deshed'],['shedding','deshed'],
+  ];
+
+  function parseNL(text) {
+    const lower = text.toLowerCase();
+    let breed = '';
+    const specs = new Set();
+
+    for (const [alias, canonical] of Object.entries(BREED_ALIASES)) {
+      if (new RegExp(`\\b${alias}\\b`, 'i').test(lower)) { breed = canonical; break; }
     }
+    if (!breed) breed = BREEDS.find(b => lower.includes(b.toLowerCase())) || '';
 
-    input.addEventListener('input', e => { render(e.target.value); onSelect && onSelect(); });
-    input.addEventListener('focus', e => { if (e.target.value) render(e.target.value); });
-    dd.addEventListener('mousedown', e => {
-      const item = e.target.closest('.ac-item');
-      if (!item) return;
-      e.preventDefault();
-      input.value = item.dataset.v;
-      dd.style.display = 'none';
-      onSelect && onSelect();
-    });
-    document.addEventListener('click', e => { if (!wrap.contains(e.target)) dd.style.display = 'none'; });
-    input.addEventListener('keydown', e => {
-      const items = [...dd.querySelectorAll('.ac-item')];
-      const cur = dd.querySelector('.ac-item.focused');
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        const next = cur ? (items[items.indexOf(cur) + 1] || items[0]) : items[0];
-        cur?.classList.remove('focused'); next?.classList.add('focused');
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        const prev = cur ? (items[items.indexOf(cur) - 1] || items[items.length - 1]) : items[items.length - 1];
-        cur?.classList.remove('focused'); prev?.classList.add('focused');
-      } else if (e.key === 'Enter' && cur) {
-        e.preventDefault(); input.value = cur.dataset.v; dd.style.display = 'none'; onSelect && onSelect();
-      } else if (e.key === 'Escape') { dd.style.display = 'none'; }
-    });
+    for (const [kw, val] of SPEC_KEYWORDS) {
+      if (lower.includes(kw)) specs.add(val);
+    }
+    return { breed, specs: [...specs] };
   }
 
   function stars(r) {
@@ -117,9 +110,7 @@
   function renderCard(g) {
     const specs = g.specialization_tags.slice(0, 2).map(s => `<span class="tag">${s}</span>`).join('');
     const certs = g.certification_tags.slice(0, 2).map(c => `<span class="cert-badge">${c}</span>`).join('');
-    const avatar = g.photo_url
-      ? `<img src="${g.photo_url}" alt="${g.name}">`
-      : g.name.charAt(0);
+    const avatar = g.photo_url ? `<img src="${g.photo_url}" alt="${g.name}">` : g.name.charAt(0);
     return `
       <div class="groomer-card" onclick="location.href='/groomer/${g.id}/profile'" style="cursor:pointer">
         <div class="gcard-avatar">${avatar}</div>
@@ -145,16 +136,29 @@
       </div>`;
   }
 
-  function applyFilters() {
-    const breed  = document.getElementById('breed-filter').value.toLowerCase().trim();
-    const specs  = [...document.querySelectorAll('.fchip.active')].map(c => c.dataset.value);
-    const hasFilter = breed || specs.length;
+  function renderActivePills(breed, specs) {
+    const el = document.getElementById('active-pills');
+    const pills = [];
+    if (breed) pills.push(`<span class="af-pill">${breed}</span>`);
+    specs.forEach(s => pills.push(`<span class="af-pill">${s}</span>`));
+    if (pills.length) {
+      el.innerHTML = pills.join('') + `<button class="af-clear" onclick="clearAll()">Clear</button>`;
+      el.style.display = 'flex';
+    } else {
+      el.style.display = 'none';
+      el.innerHTML = '';
+    }
+  }
 
-    document.getElementById('breed-x').style.display  = breed ? 'inline' : 'none';
-    document.getElementById('clear-btn').style.display = hasFilter ? 'inline' : 'none';
+  function applyFilters() {
+    const raw = document.getElementById('nl-input').value.trim();
+    const { breed, specs } = raw ? parseNL(raw) : { breed: '', specs: [] };
+
+    document.getElementById('nl-clear').style.display = raw ? 'inline' : 'none';
+    renderActivePills(breed, specs);
 
     filteredGroomers = allGroomers.filter(g => {
-      if (breed && !g.breed_expertise.some(b => b.toLowerCase().includes(breed))) return false;
+      if (breed && !g.breed_expertise.some(b => b.toLowerCase().includes(breed.toLowerCase()))) return false;
       if (specs.length && !specs.every(s => g.specialization_tags.some(t => t.toLowerCase().includes(s)))) return false;
       return true;
     });
@@ -163,42 +167,48 @@
     document.getElementById('result-count').textContent = `${count} groomer${count !== 1 ? 's' : ''} found`;
 
     const grid = document.getElementById('groomer-grid');
-    if (!count) {
-      grid.innerHTML = '<div class="empty-state">No groomers match — <button onclick="clearFilters()" class="link-btn">clear filters</button></div>';
-    } else {
-      grid.innerHTML = filteredGroomers.map(renderCard).join('');
-    }
+    grid.innerHTML = count
+      ? filteredGroomers.map(renderCard).join('')
+      : '<div class="empty-state">No groomers match — <button onclick="clearAll()" class="link-btn">clear search</button></div>';
 
     if (map) updateMapMarkers();
   }
 
-  function toggleChip(btn) { btn.classList.toggle('active'); applyFilters(); }
-
-  function clearBreed() {
-    document.getElementById('breed-filter').value = '';
-    document.getElementById('breed-x').style.display = 'none';
+  function clearAll() {
+    document.getElementById('nl-input').value = '';
     applyFilters();
   }
 
-  function clearFilters() {
-    clearBreed();
-    document.querySelectorAll('.fchip.active').forEach(c => c.classList.remove('active'));
-    applyFilters();
+  // ── Voice search ──────────────────────────────────────────────────────────
+  function startVoice() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert('Voice search isn\'t supported in this browser. Try Chrome or Safari.'); return; }
+    if (recognition) { recognition.stop(); return; }
+
+    recognition = new SR();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+
+    const mic = document.getElementById('mic-btn');
+    mic.classList.add('listening');
+
+    recognition.onresult = (e) => {
+      document.getElementById('nl-input').value = e.results[0][0].transcript;
+      applyFilters();
+    };
+    recognition.onend  = () => { recognition = null; mic.classList.remove('listening'); };
+    recognition.onerror = () => { recognition = null; mic.classList.remove('listening'); };
+    recognition.start();
   }
 
   // ── Map ──────────────────────────────────────────────────────────────────
-
   function setView(v) {
     const isList = v === 'list';
     document.getElementById('groomer-grid').style.display = isList ? '' : 'none';
     document.getElementById('map-view').style.display     = isList ? 'none' : 'block';
     document.getElementById('tab-list').classList.toggle('vtab--active', isList);
     document.getElementById('tab-map').classList.toggle('vtab--active', !isList);
-
-    if (!isList) {
-      if (!map) initMap();
-      else { map.invalidateSize(); updateMapMarkers(); }
-    }
+    if (!isList) { if (!map) initMap(); else { map.invalidateSize(); updateMapMarkers(); } }
   }
 
   function initMap() {
@@ -212,7 +222,6 @@
   function updateMapMarkers() {
     markers.forEach(m => m.remove());
     markers = [];
-
     filteredGroomers.filter(g => g.lat && g.lng).forEach(g => {
       const popup = `
         <div style="min-width:180px">
@@ -223,24 +232,18 @@
           <strong style="color:#16A34A;font-size:0.85rem">From $${g.starting_from}</strong><br>
           <a href="/groomer/${g.id}/profile" style="color:#16A34A;font-size:0.82rem;font-weight:600">View profile →</a>
         </div>`;
-
       const icon = L.divIcon({
         html: `<div style="background:#16A34A;color:#fff;border-radius:9999px;padding:4px 10px;font-size:0.75rem;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2)">${g.name.split(' ')[0]}</div>`,
-        className: '',
-        iconAnchor: [30, 12],
+        className: '', iconAnchor: [30, 12],
       });
-
-      const m = L.marker([g.lat, g.lng], { icon })
-        .bindPopup(popup)
-        .addTo(map);
-      markers.push(m);
+      markers.push(L.marker([g.lat, g.lng], { icon }).bindPopup(popup).addTo(map));
     });
   }
 
   async function load() {
     const res = await fetch('/api/groomers');
     allGroomers = await res.json();
-    makeAutocomplete(document.getElementById('breed-filter'), BREEDS, applyFilters);
+    document.getElementById('nl-input').addEventListener('input', applyFilters);
     applyFilters();
   }
 

@@ -264,9 +264,16 @@
     goStep(2);
   }
 
-  document.getElementById('phone-in').addEventListener('keydown', e => {
-    if (e.key === 'Enter') lookupOwner();
-  });
+  function formatPhone(val) {
+    const d = val.replace(/\D/g, '').slice(0, 10);
+    if (d.length <= 3) return d.length ? `(${d}` : '';
+    if (d.length <= 6) return `(${d.slice(0,3)}) ${d.slice(3)}`;
+    return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+  }
+
+  const phoneIn = document.getElementById('phone-in');
+  phoneIn.addEventListener('input', e => { e.target.value = formatPhone(e.target.value); });
+  phoneIn.addEventListener('keydown', e => { if (e.key === 'Enter') lookupOwner(); });
 
   // ── Step 1b: Inline registration ─────────────────────────────────────────
 

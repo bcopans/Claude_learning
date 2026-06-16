@@ -334,9 +334,18 @@
     document.getElementById('auth-section').style.display = 'none';
   }
 
-  document.getElementById('phone-input')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') lookupByPhone();
-  });
+  function formatPhone(val) {
+    const d = val.replace(/\D/g, '').slice(0, 10);
+    if (d.length <= 3) return d.length ? `(${d}` : '';
+    if (d.length <= 6) return `(${d.slice(0,3)}) ${d.slice(3)}`;
+    return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+  }
+
+  const phoneInput = document.getElementById('phone-input');
+  if (phoneInput) {
+    phoneInput.addEventListener('input', e => { e.target.value = formatPhone(e.target.value); });
+    phoneInput.addEventListener('keydown', e => { if (e.key === 'Enter') lookupByPhone(); });
+  }
 
   // ── Boot ──────────────────────────────────────────────────────────────────
 
