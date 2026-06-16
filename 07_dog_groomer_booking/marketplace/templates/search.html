@@ -20,31 +20,23 @@
   <p>Every groomer is verified, certified, and care-first.</p>
 </div>
 
-<!-- Filters -->
-<div class="filter-bar">
-  <div class="filter-group">
-    <label>Breed</label>
-    <div class="ac-wrap">
-      <input type="text" id="breed-filter" placeholder="e.g. Goldendoodle" autocomplete="off">
-    </div>
+<!-- Filter strip -->
+<div class="filter-strip">
+  <div class="filter-breed-pill ac-wrap" id="breed-pill">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:#6B7280"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="breed-filter" placeholder="Breed" autocomplete="off">
+    <button class="breed-clear" id="breed-x" onclick="clearBreed()" style="display:none" aria-label="Clear breed">×</button>
   </div>
-  <div class="filter-group">
-    <label>Specialization</label>
-    <div class="filter-chips">
-      <button class="fchip" data-value="anxious dogs"  onclick="toggleChip(this)">Anxious dogs</button>
-      <button class="fchip" data-value="senior dogs"   onclick="toggleChip(this)">Senior dogs</button>
-      <button class="fchip" data-value="puppies"       onclick="toggleChip(this)">Puppies</button>
-      <button class="fchip" data-value="show cuts"     onclick="toggleChip(this)">Show cuts</button>
-    </div>
-  </div>
-  <div class="filter-group">
-    <label>Cut style</label>
-    <div class="filter-chips">
-      <button class="fchip" data-value="teddy bear" onclick="toggleChip(this)">Teddy bear</button>
-      <button class="fchip" data-value="puppy cut"  onclick="toggleChip(this)">Puppy cut</button>
-      <button class="fchip" data-value="deshed"     onclick="toggleChip(this)">Deshed</button>
-      <button class="fchip" data-value="hand-strip" onclick="toggleChip(this)">Hand strip</button>
-    </div>
+  <div class="filter-sep"></div>
+  <div class="filter-chips-scroll">
+    <button class="fchip" data-value="anxious dogs" onclick="toggleChip(this)">Anxious dogs</button>
+    <button class="fchip" data-value="puppies"      onclick="toggleChip(this)">Puppies</button>
+    <button class="fchip" data-value="senior dogs"  onclick="toggleChip(this)">Senior dogs</button>
+    <button class="fchip" data-value="teddy bear"   onclick="toggleChip(this)">Teddy bear</button>
+    <button class="fchip" data-value="puppy cut"    onclick="toggleChip(this)">Puppy cut</button>
+    <button class="fchip" data-value="show cuts"    onclick="toggleChip(this)">Show cuts</button>
+    <button class="fchip" data-value="deshed"       onclick="toggleChip(this)">Deshed</button>
+    <button class="fchip" data-value="hand-strip"   onclick="toggleChip(this)">Hand strip</button>
   </div>
 </div>
 
@@ -156,9 +148,9 @@
   function applyFilters() {
     const breed  = document.getElementById('breed-filter').value.toLowerCase().trim();
     const specs  = [...document.querySelectorAll('.fchip.active')].map(c => c.dataset.value);
-    const cuts   = [];
     const hasFilter = breed || specs.length;
 
+    document.getElementById('breed-x').style.display  = breed ? 'inline' : 'none';
     document.getElementById('clear-btn').style.display = hasFilter ? 'inline' : 'none';
 
     filteredGroomers = allGroomers.filter(g => {
@@ -182,8 +174,14 @@
 
   function toggleChip(btn) { btn.classList.toggle('active'); applyFilters(); }
 
-  function clearFilters() {
+  function clearBreed() {
     document.getElementById('breed-filter').value = '';
+    document.getElementById('breed-x').style.display = 'none';
+    applyFilters();
+  }
+
+  function clearFilters() {
+    clearBreed();
     document.querySelectorAll('.fchip.active').forEach(c => c.classList.remove('active'));
     applyFilters();
   }
