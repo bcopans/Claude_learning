@@ -595,19 +595,25 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
 
 .gprofile-bio {
   padding: 20px 16px 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.65;
+  color: #4B5563;
+  font-size: 0.92rem;
+  line-height: 1.7;
 }
 
 .gprofile-section { padding: 28px 16px 0; }
 .gprofile-section h2 {
-  font-size: 0.72rem;
+  font-size: 1rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--muted);
-  margin-bottom: 14px;
+  letter-spacing: -0.2px;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+/* Offset anchor sections so sticky nav doesn't cover the header */
+#sect-services,
+#sect-portfolio,
+#sect-reviews {
+  scroll-margin-top: 108px;
 }
 
 .section-sub { color: var(--muted); font-size: 0.82rem; margin-bottom: 12px; }
