@@ -114,35 +114,35 @@
   }
 
   function renderCard(g) {
-    const specs = g.specialization_tags.slice(0, 2).map(s => `<span class="tag">${s}</span>`).join('');
-    const certs = g.certification_tags.slice(0, 2).map(c => `<span class="cert-badge">${c}</span>`).join('');
     const avatarStyle = g.photo_url ? '' : `style="background:${avatarBg(g.name)}"`;
     const avatar = g.photo_url ? `<img src="${g.photo_url}" alt="${g.name}">` : g.name.charAt(0);
     const coverHtml = g.cover_photo_url
-      ? `<div class="gcard-cover"><img src="${g.cover_photo_url}" alt=""></div>`
+      ? `<div class="gcard-cover"><img src="${g.cover_photo_url}" alt="${g.name} portfolio"></div>`
       : '';
+
+    // Breed match line (only when user searched a breed)
+    const raw = document.getElementById('nl-input').value.trim().toLowerCase();
+    const { breed } = raw ? parseNL(raw) : { breed: '' };
+    const hasBreedMatch = breed && g.breed_expertise.some(b => b.toLowerCase().includes(breed.toLowerCase()));
+    const breedMatchHtml = hasBreedMatch
+      ? `<div class="gcard-match">✓ Does ${breed}</div>`
+      : '';
+
     return `
-      <div class="groomer-card${g.cover_photo_url ? ' groomer-card--has-cover' : ''}" onclick="location.href='/groomer/${g.id}/profile'" style="cursor:pointer">
+      <div class="groomer-card${coverHtml ? ' groomer-card--has-cover' : ''}" onclick="location.href='/groomer/${g.id}/profile'" style="cursor:pointer">
         ${coverHtml}
         <div class="gcard-main">
           <div class="gcard-avatar" ${avatarStyle}>${avatar}</div>
           <div class="gcard-body">
             <div class="gcard-top">
-              <div>
-                <div class="gcard-name">${g.name}</div>
-                <div class="gcard-biz">${g.business_name} · ${g.location}</div>
-              </div>
-              <div class="gcard-rating">
-                <span class="stars">${stars(g.avg_rating)}</span>
-                <span class="rating-val">${g.avg_rating}</span>
-                <span class="rating-cnt">(${g.total_reviews})</span>
-              </div>
+              <div class="gcard-name">${g.name}</div>
+              <div class="gcard-rating-pill">★ ${g.avg_rating} <span class="gcard-reviews">(${g.total_reviews})</span></div>
             </div>
-            <p class="gcard-bio">${g.bio.slice(0, 90)}…</p>
-            <div class="gcard-tags">${specs}${certs}</div>
+            <div class="gcard-loc">${g.location}</div>
+            ${breedMatchHtml}
             <div class="gcard-footer">
               <span class="gcard-price">From $${g.starting_from}</span>
-              <a href="/groomer/${g.id}/profile" class="btn btn-primary" style="height:34px;padding:0 14px;font-size:0.8rem" onclick="event.stopPropagation()">Book →</a>
+              <a href="/groomer/${g.id}/profile" class="btn btn-primary" style="height:36px;padding:0 16px;font-size:0.82rem" onclick="event.stopPropagation()">Book →</a>
             </div>
           </div>
         </div>
