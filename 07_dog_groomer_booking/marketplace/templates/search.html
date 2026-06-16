@@ -33,6 +33,30 @@
   <div class="active-pills" id="active-pills" style="display:none"></div>
 </div>
 
+<!-- Sort + Filter bar -->
+<div class="filter-bar">
+  <select class="fbar-sort" id="sort-select" onchange="applyFilters()">
+    <option value="rating">★ Best rated</option>
+    <option value="reviews">Most reviewed</option>
+    <option value="price-asc">Price: Low → High</option>
+    <option value="price-desc">Price: High → Low</option>
+  </select>
+
+  <div class="fbar-divider"></div>
+
+  <button class="fchip" id="chip-u60"  onclick="toggleChip('price','u60')"  >Under $60</button>
+  <button class="fchip" id="chip-60-100" onclick="toggleChip('price','60-100')">$60–$100</button>
+  <button class="fchip" id="chip-o100" onclick="toggleChip('price','o100')" >Over $100</button>
+
+  <div class="fbar-divider"></div>
+
+  <button class="fchip" id="chip-anxious"  onclick="toggleChip('spec','anxious dogs')" >😰 Anxious dogs</button>
+  <button class="fchip" id="chip-puppies"  onclick="toggleChip('spec','puppies')"      >🐶 Puppies</button>
+  <button class="fchip" id="chip-senior"   onclick="toggleChip('spec','senior dogs')"  >🐕 Senior dogs</button>
+  <button class="fchip" id="chip-deshed"   onclick="toggleChip('spec','deshed')"       >🪮 Deshed</button>
+  <button class="fchip" id="chip-handstrip" onclick="toggleChip('spec','hand-strip')"  >✂️ Hand-strip</button>
+</div>
+
 <!-- Results bar + view toggle -->
 <div class="results-bar">
   <span id="result-count"></span>
@@ -53,6 +77,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
   let allGroomers = [], filteredGroomers = [], map = null, markers = [], recognition = null;
+  let activePrice = null;     // 'u60' | '60-100' | 'o100' | null
+  let activeSpecs = new Set(); // 'anxious dogs' | 'puppies' | etc.
 
   const BREEDS = ["Labrador Retriever","Golden Retriever","German Shepherd","Bulldog","Beagle","Poodle","Miniature Poodle","Chihuahua","Boxer","Miniature Schnauzer","Yorkshire Terrier","Dachshund","Shih Tzu","Doberman Pinscher","Great Dane","Siberian Husky","Rottweiler","Australian Shepherd","Border Collie","Cocker Spaniel","Pembroke Welsh Corgi","Maltese","Bichon Frise","Havanese","Shetland Sheepdog","Cavalier King Charles Spaniel","Pomeranian","Boston Terrier","Bernese Mountain Dog","Saint Bernard","Weimaraner","Goldendoodle","Labradoodle","Cavapoo","Cockapoo","Maltipoo","Aussiedoodle","Bernedoodle","Airedale Terrier","Rhodesian Ridgeback","Belgian Malinois","Italian Greyhound","Whippet","Basenji","Bloodhound","Basset Hound","Irish Setter","Samoyed"];
 
@@ -75,7 +101,6 @@
     'cockapoo':'Cockapoo','aussiedoodle':'Aussiedoodle','bernedoodle':'Bernedoodle',
   };
 
-  // Ordered multi-word first so "puppy cut" matches before "puppy"
   const SPEC_KEYWORDS = [
     ['teddy bear','teddy bear'],['puppy cut','puppy cut'],
     ['show cut','show cuts'],['show cuts','show cuts'],['competition cut','show cuts'],
@@ -90,21 +115,28 @@
     const lower = text.toLowerCase();
     let breed = '';
     const specs = new Set();
-
     for (const [alias, canonical] of Object.entries(BREED_ALIASES)) {
       if (new RegExp(`\\b${alias}\\b`, 'i').test(lower)) { breed = canonical; break; }
     }
     if (!breed) breed = BREEDS.find(b => lower.includes(b.toLowerCase())) || '';
-
     for (const [kw, val] of SPEC_KEYWORDS) {
       if (lower.includes(kw)) specs.add(val);
     }
     return { breed, specs: [...specs] };
   }
 
-  function stars(r) {
-    const f = Math.floor(r), h = r % 1 >= 0.5 ? 1 : 0;
-    return '★'.repeat(f) + (h ? '½' : '') + '☆'.repeat(5 - f - h);
+  function toggleChip(type, val) {
+    if (type === 'price') {
+      activePrice = (activePrice === val) ? null : val;
+      ['u60','60-100','o100'].forEach(k => {
+        document.getElementById('chip-' + k).classList.toggle('fchip--active', activePrice === k);
+      });
+    } else {
+      const id = 'chip-' + val.replace(/ /g,'-').replace(/[^a-z0-9-]/g,'');
+      if (activeSpecs.has(val)) { activeSpecs.delete(val); document.getElementById(id).classList.remove('fchip--active'); }
+      else                       { activeSpecs.add(val);    document.getElementById(id).classList.add('fchip--active'); }
+    }
+    applyFilters();
   }
 
   function avatarBg(name) {
@@ -120,12 +152,23 @@
       ? `<div class="gcard-cover"><img src="${g.cover_photo_url}" alt="${g.name} portfolio"></div>`
       : '';
 
-    // Breed match line (only when user searched a breed)
+    // Breed match badge
     const raw = document.getElementById('nl-input').value.trim().toLowerCase();
     const { breed } = raw ? parseNL(raw) : { breed: '' };
     const hasBreedMatch = breed && g.breed_expertise.some(b => b.toLowerCase().includes(breed.toLowerCase()));
     const breedMatchHtml = hasBreedMatch
       ? `<div class="gcard-match">✓ Does ${breed}</div>`
+      : '';
+
+    // Up to 3 specialty tags from cut_specialties + specialization_tags
+    const allTags = [...(g.cut_specialties || []), ...(g.specialization_tags || [])];
+    const tagHtml = allTags.length
+      ? `<div class="gcard-tags">${allTags.slice(0,3).map(t => `<span class="gcard-tag">${t}</span>`).join('')}</div>`
+      : '';
+
+    // Business name (show if different from groomer name)
+    const bizHtml = g.business_name && g.business_name !== g.name
+      ? `<div class="gcard-biz">${g.business_name}</div>`
       : '';
 
     return `
@@ -138,8 +181,10 @@
               <div class="gcard-name">${g.name}</div>
               <div class="gcard-rating-pill">★ ${g.avg_rating} <span class="gcard-reviews">(${g.total_reviews})</span></div>
             </div>
+            ${bizHtml}
             <div class="gcard-loc">${g.location}</div>
             ${breedMatchHtml}
+            ${tagHtml}
             <div class="gcard-footer">
               <span class="gcard-price">From $${g.starting_from}</span>
               <a href="/groomer/${g.id}/profile" class="btn btn-primary" style="height:36px;padding:0 16px;font-size:0.82rem" onclick="event.stopPropagation()">Book →</a>
@@ -155,7 +200,7 @@
     if (breed) pills.push(`<span class="af-pill">${breed}</span>`);
     specs.forEach(s => pills.push(`<span class="af-pill">${s}</span>`));
     if (pills.length) {
-      el.innerHTML = pills.join('') + `<button class="af-clear" onclick="clearAll()">Clear</button>`;
+      el.innerHTML = pills.join('') + `<button class="af-clear" onclick="clearNL()">Clear</button>`;
       el.style.display = 'flex';
     } else {
       el.style.display = 'none';
@@ -163,18 +208,36 @@
     }
   }
 
+  function sortGroomers(list) {
+    const s = document.getElementById('sort-select').value;
+    return [...list].sort((a, b) => {
+      if (s === 'price-asc')  return a.starting_from - b.starting_from;
+      if (s === 'price-desc') return b.starting_from - a.starting_from;
+      if (s === 'reviews')    return b.total_reviews - a.total_reviews;
+      return b.avg_rating - a.avg_rating; // default: best rated
+    });
+  }
+
   function applyFilters() {
     const raw = document.getElementById('nl-input').value.trim();
-    const { breed, specs } = raw ? parseNL(raw) : { breed: '', specs: [] };
+    const { breed, specs: nlSpecs } = raw ? parseNL(raw) : { breed: '', specs: [] };
 
     document.getElementById('nl-clear').style.display = raw ? 'inline' : 'none';
-    renderActivePills(breed, specs);
+    renderActivePills(breed, nlSpecs);
+
+    // Combine NL specs with chip specs
+    const allSpecs = new Set([...nlSpecs, ...activeSpecs]);
 
     filteredGroomers = allGroomers.filter(g => {
       if (breed && !g.breed_expertise.some(b => b.toLowerCase().includes(breed.toLowerCase()))) return false;
-      if (specs.length && !specs.every(s => g.specialization_tags.some(t => t.toLowerCase().includes(s)))) return false;
+      if (allSpecs.size && ![...allSpecs].every(s => g.specialization_tags.some(t => t.toLowerCase().includes(s)))) return false;
+      if (activePrice === 'u60'   && g.starting_from >= 60)  return false;
+      if (activePrice === '60-100' && (g.starting_from < 60 || g.starting_from > 100)) return false;
+      if (activePrice === 'o100'  && g.starting_from <= 100) return false;
       return true;
     });
+
+    filteredGroomers = sortGroomers(filteredGroomers);
 
     const count = filteredGroomers.length;
     document.getElementById('result-count').textContent = `${count} groomer${count !== 1 ? 's' : ''} found`;
@@ -182,13 +245,25 @@
     const grid = document.getElementById('groomer-grid');
     grid.innerHTML = count
       ? filteredGroomers.map(renderCard).join('')
-      : '<div class="empty-state">No groomers match — <button onclick="clearAll()" class="link-btn">clear search</button></div>';
+      : '<div class="empty-state">No groomers match — <button onclick="clearAll()" class="link-btn">clear all filters</button></div>';
 
     if (map) updateMapMarkers();
   }
 
+  function clearNL() {
+    document.getElementById('nl-input').value = '';
+    applyFilters();
+  }
+
   function clearAll() {
     document.getElementById('nl-input').value = '';
+    activePrice = null;
+    activeSpecs.clear();
+    ['u60','60-100','o100'].forEach(k => document.getElementById('chip-' + k).classList.remove('fchip--active'));
+    ['anxious','puppies','senior','deshed','handstrip'].forEach(k => {
+      const el = document.getElementById('chip-' + k);
+      if (el) el.classList.remove('fchip--active');
+    });
     applyFilters();
   }
 
@@ -246,7 +321,7 @@
           <a href="/groomer/${g.id}/profile" style="color:#16A34A;font-size:0.82rem;font-weight:600">View profile →</a>
         </div>`;
       const icon = L.divIcon({
-        html: `<div style="background:#16A34A;color:#fff;border-radius:9999px;padding:4px 10px;font-size:0.75rem;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2)">${g.name.split(' ')[0]}</div>`,
+        html: `<div style="background:#7C3AED;color:#fff;border-radius:9999px;padding:4px 10px;font-size:0.75rem;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2)">${g.name.split(' ')[0]}</div>`,
         className: '', iconAnchor: [30, 12],
       });
       markers.push(L.marker([g.lat, g.lng], { icon }).bindPopup(popup).addTo(map));
