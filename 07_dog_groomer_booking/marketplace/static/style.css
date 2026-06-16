@@ -840,10 +840,11 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 16px;
-  height: 52px;
+  padding: 0 18px;
+  height: 56px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 var(--border);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -1245,12 +1246,12 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
 .earnings-page { min-height: 100vh; background: var(--bg); }
 
 .earnings-hero {
-  background: var(--green);
+  background: var(--hero-grad);
   color: #fff;
-  padding: 20px 20px 22px;
+  padding: 24px 20px 26px;
 }
-.earnings-hero-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; margin-bottom: 4px; }
-.earnings-hero-name  { font-size: 1.25rem; font-weight: 800; }
+.earnings-hero-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.72; margin-bottom: 5px; }
+.earnings-hero-name  { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.3px; }
 
 .earnings-body { max-width: 640px; margin: 0 auto; padding: 20px 16px 0; }
 
@@ -1263,16 +1264,18 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
 }
 .ecard {
   background: var(--surface);
-  border-radius: var(--r);
-  padding: 14px 12px;
-  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px 12px;
+  box-shadow: var(--sh);
   text-align: center;
 }
-.ecard--highlight { border-color: var(--green); background: var(--green-light); }
-.ecard-label  { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
-.ecard-amount { font-size: 1.15rem; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; }
-.ecard--highlight .ecard-amount { color: var(--green); }
+.ecard--highlight { background: var(--green-dark); }
+.ecard-label  { font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+.ecard--highlight .ecard-label { color: rgba(255,255,255,0.7); }
+.ecard-amount { font-size: 1.2rem; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; letter-spacing: -0.3px; }
+.ecard--highlight .ecard-amount { color: #fff; }
 .ecard-count  { font-size: 0.72rem; color: var(--muted); }
+.ecard--highlight .ecard-count { color: rgba(255,255,255,0.65); }
 
 /* Section */
 .esection { margin-bottom: 24px; }
@@ -1291,8 +1294,8 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
   align-items: flex-end;
   gap: 6px;
   background: var(--surface);
-  border-radius: var(--r);
-  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh);
   padding: 16px 12px 10px;
   height: 160px;
 }
@@ -1342,8 +1345,8 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
 /* Service breakdown */
 .eservice-list {
   background: var(--surface);
-  border-radius: var(--r);
-  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh);
   overflow: hidden;
 }
 .eservice-row {
@@ -1362,24 +1365,26 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
 /* Recent grooms */
 .erecent-list {
   background: var(--surface);
-  border-radius: var(--r);
-  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh);
   overflow: hidden;
 }
 .erecent-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
 }
+.erecent-row:hover { background: var(--bg); }
 .erecent-row:last-child { border-bottom: none; }
 .erecent-left  { flex: 1; min-width: 0; }
-.erecent-dog   { font-weight: 600; font-size: 0.88rem; }
+.erecent-dog   { font-weight: 600; font-size: 0.9rem; letter-spacing: -0.1px; }
 .erecent-breed { color: var(--muted); font-weight: 400; }
-.erecent-meta  { color: var(--muted); font-size: 0.78rem; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.erecent-meta  { color: var(--muted); font-size: 0.78rem; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .erecent-date  { color: var(--subtle); font-size: 0.73rem; margin-top: 1px; }
-.erecent-price { font-weight: 700; color: var(--green); font-size: 0.92rem; white-space: nowrap; }
+.erecent-price { font-weight: 800; color: var(--green-dark); font-size: 0.95rem; white-space: nowrap; letter-spacing: -0.1px; }
 
 /* ─────────────────────────────────────────────
    TABLET +
