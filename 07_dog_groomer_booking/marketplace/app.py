@@ -344,7 +344,7 @@ def api_groomers():
                 "SELECT MIN(price) as p FROM services WHERE groomer_id=?", (g["id"],)
             ).fetchone()["p"]
             cover = conn.execute(
-                "SELECT photo_url FROM portfolio WHERE groomer_id=? AND photo_url!='' ORDER BY id LIMIT 1",
+                "SELECT photo_url FROM dog_photos WHERE groomer_id=? AND is_portfolio=1 AND photo_url!='' ORDER BY id LIMIT 1",
                 (g["id"],)
             ).fetchone()
             result.append({
