@@ -33,37 +33,37 @@
   <div class="active-pills" id="active-pills" style="display:none"></div>
 </div>
 
-<!-- Sort + Filter bar -->
-<div class="filter-bar">
-  <select class="fbar-sort" id="sort-select" onchange="applyFilters()">
-    <option value="rating">★ Best rated</option>
-    <option value="reviews">Most reviewed</option>
-    <option value="price-asc">Price: Low → High</option>
-    <option value="price-desc">Price: High → Low</option>
-  </select>
-
-  <div class="fbar-divider"></div>
-
-  <button class="fchip" id="chip-u60"  onclick="toggleChip('price','u60')"  >Under $60</button>
-  <button class="fchip" id="chip-60-100" onclick="toggleChip('price','60-100')">$60–$100</button>
-  <button class="fchip" id="chip-o100" onclick="toggleChip('price','o100')" >Over $100</button>
-
-  <div class="fbar-divider"></div>
-
-  <button class="fchip" id="chip-anxious"  onclick="toggleChip('spec','anxious dogs')" >😰 Anxious dogs</button>
-  <button class="fchip" id="chip-puppies"  onclick="toggleChip('spec','puppies')"      >🐶 Puppies</button>
-  <button class="fchip" id="chip-senior"   onclick="toggleChip('spec','senior dogs')"  >🐕 Senior dogs</button>
-  <button class="fchip" id="chip-deshed"   onclick="toggleChip('spec','deshed')"       >🪮 Deshed</button>
-  <button class="fchip" id="chip-handstrip" onclick="toggleChip('spec','hand-strip')"  >✂️ Hand-strip</button>
-</div>
-
-<!-- Results bar + view toggle -->
+<!-- Results bar + sort + filter toggle -->
 <div class="results-bar">
   <span id="result-count"></span>
-  <div class="view-toggle">
-    <button class="vtab vtab--active" id="tab-list" onclick="setView('list')">≡ List</button>
-    <button class="vtab" id="tab-map"  onclick="setView('map')">⊕ Map</button>
+  <div class="results-bar-right">
+    <select class="fbar-sort" id="sort-select" onchange="applyFilters()">
+      <option value="rating">★ Best rated</option>
+      <option value="reviews">Most reviewed</option>
+      <option value="price-asc">Price: Low → High</option>
+      <option value="price-desc">Price: High → Low</option>
+    </select>
+    <button class="filter-toggle-btn" id="filter-toggle-btn" onclick="toggleFilters()">
+      ⚙ Filters <span class="filter-badge" id="filter-badge" style="display:none">0</span>
+    </button>
+    <div class="view-toggle">
+      <button class="vtab vtab--active" id="tab-list" onclick="setView('list')">≡ List</button>
+      <button class="vtab" id="tab-map"  onclick="setView('map')">⊕ Map</button>
+    </div>
   </div>
+</div>
+
+<!-- Collapsible filter chip strip -->
+<div class="filter-bar" id="filter-bar">
+  <button class="fchip" id="chip-u60"    onclick="toggleChip('price','u60')"      >Under $60</button>
+  <button class="fchip" id="chip-60-100" onclick="toggleChip('price','60-100')"   >$60–$100</button>
+  <button class="fchip" id="chip-o100"   onclick="toggleChip('price','o100')"     >Over $100</button>
+  <div class="fbar-divider"></div>
+  <button class="fchip" id="chip-anxious"   onclick="toggleChip('spec','anxious dogs')" >😰 Anxious dogs</button>
+  <button class="fchip" id="chip-puppies"   onclick="toggleChip('spec','puppies')"      >🐶 Puppies</button>
+  <button class="fchip" id="chip-senior"    onclick="toggleChip('spec','senior dogs')"  >🐕 Senior dogs</button>
+  <button class="fchip" id="chip-deshed"    onclick="toggleChip('spec','deshed')"       >🪮 Deshed</button>
+  <button class="fchip" id="chip-handstrip" onclick="toggleChip('spec','hand-strip')"   >✂️ Hand-strip</button>
 </div>
 
 <!-- List view -->
@@ -125,6 +125,22 @@
     return { breed, specs: [...specs] };
   }
 
+  function toggleFilters() {
+    const bar = document.getElementById('filter-bar');
+    const btn = document.getElementById('filter-toggle-btn');
+    bar.classList.toggle('open');
+    btn.classList.toggle('filter-toggle-btn--active', bar.classList.contains('open'));
+  }
+
+  function updateFilterBadge() {
+    const count = (activePrice ? 1 : 0) + activeSpecs.size;
+    const badge = document.getElementById('filter-badge');
+    badge.style.display = count ? 'inline-flex' : 'none';
+    badge.textContent = count;
+    const btn = document.getElementById('filter-toggle-btn');
+    btn.classList.toggle('filter-toggle-btn--active', count > 0 || document.getElementById('filter-bar').classList.contains('open'));
+  }
+
   function toggleChip(type, val) {
     if (type === 'price') {
       activePrice = (activePrice === val) ? null : val;
@@ -136,6 +152,7 @@
       if (activeSpecs.has(val)) { activeSpecs.delete(val); document.getElementById(id).classList.remove('fchip--active'); }
       else                       { activeSpecs.add(val);    document.getElementById(id).classList.add('fchip--active'); }
     }
+    updateFilterBadge();
     applyFilters();
   }
 
@@ -160,16 +177,10 @@
       ? `<div class="gcard-match">✓ Does ${breed}</div>`
       : '';
 
-    // Up to 3 specialty tags from cut_specialties + specialization_tags
-    const allTags = [...(g.cut_specialties || []), ...(g.specialization_tags || [])];
-    const tagHtml = allTags.length
-      ? `<div class="gcard-tags">${allTags.slice(0,3).map(t => `<span class="gcard-tag">${t}</span>`).join('')}</div>`
-      : '';
-
-    // Business name (show if different from groomer name)
-    const bizHtml = g.business_name && g.business_name !== g.name
-      ? `<div class="gcard-biz">${g.business_name}</div>`
-      : '';
+    // Single meta line: location · top 2 specialties
+    const topTags = [...(g.cut_specialties || []), ...(g.specialization_tags || [])].slice(0, 2);
+    const metaParts = [g.location, ...topTags];
+    const metaHtml = `<div class="gcard-meta">${metaParts.join(' · ')}</div>`;
 
     return `
       <div class="groomer-card${coverHtml ? ' groomer-card--has-cover' : ''}" onclick="location.href='/groomer/${g.id}/profile'" style="cursor:pointer">
@@ -181,10 +192,8 @@
               <div class="gcard-name">${g.name}</div>
               <div class="gcard-rating-pill">★ ${g.avg_rating} <span class="gcard-reviews">(${g.total_reviews})</span></div>
             </div>
-            ${bizHtml}
-            <div class="gcard-loc">${g.location}</div>
+            ${metaHtml}
             ${breedMatchHtml}
-            ${tagHtml}
             <div class="gcard-footer">
               <span class="gcard-price">From $${g.starting_from}</span>
               <a href="/groomer/${g.id}/profile" class="btn btn-primary" style="height:36px;padding:0 16px;font-size:0.82rem" onclick="event.stopPropagation()">Book →</a>

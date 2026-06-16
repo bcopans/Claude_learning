@@ -361,18 +361,23 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
   font-family: inherit;
 }
 
-/* ── Sort + Filter bar ── */
-.filter-bar {
+/* ── Results bar (holds sort + filter toggle) ── */
+.results-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 8px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  gap: 8px;
+}
+
+.results-bar-right {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px 12px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
-.filter-bar::-webkit-scrollbar { display: none; }
 
 .fbar-sort {
   appearance: none;
@@ -382,20 +387,64 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
   border-radius: 9999px;
   color: var(--text);
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  padding: 5px 28px 5px 12px;
+  padding: 5px 26px 5px 10px;
   cursor: pointer;
-  flex-shrink: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236B7280'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 10px center;
+  background-position: right 9px center;
 }
 .fbar-sort:focus { outline: none; border-color: var(--green); }
 
+.filter-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 9999px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.filter-toggle-btn:hover { border-color: var(--green); color: var(--green); }
+.filter-toggle-btn--active { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+
+.filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: var(--green);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+/* ── Collapsible filter chip strip ── */
+.filter-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  border-bottom: 1px solid var(--border);
+}
+.filter-bar.open { display: flex; }
+.filter-bar::-webkit-scrollbar { display: none; }
+
 .fbar-divider {
   width: 1px;
-  height: 20px;
+  height: 18px;
   background: var(--border);
   flex-shrink: 0;
 }
@@ -422,15 +471,6 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
   background: var(--green-light);
   border-color: var(--green);
   color: var(--green-dark);
-}
-
-.results-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px 6px;
-  font-size: 0.82rem;
-  color: var(--muted);
 }
 
 .clear-btn { background: none; border: none; color: var(--green); font-size: 0.82rem; cursor: pointer; font-family: inherit; text-decoration: underline; }
@@ -471,16 +511,13 @@ textarea.input  { height: auto; padding-top: 12px; padding-bottom: 12px; resize:
 }
 
 .gcard-body        { flex: 1; min-width: 0; }
-.gcard-top         { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 2px; }
+.gcard-top         { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 3px; }
 .gcard-name        { font-weight: 700; font-size: 1rem; letter-spacing: -0.2px; }
 .gcard-rating-pill { font-size: 0.82rem; font-weight: 700; color: var(--text); white-space: nowrap; flex-shrink: 0; }
 .gcard-reviews     { font-weight: 400; color: var(--subtle); }
-.gcard-biz         { font-size: 0.78rem; color: var(--subtle); margin-bottom: 2px; }
-.gcard-loc         { color: var(--muted); font-size: 0.8rem; margin-bottom: 8px; }
+.gcard-meta        { color: var(--muted); font-size: 0.8rem; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gcard-match       { font-size: 0.78rem; font-weight: 600; color: var(--green); background: var(--green-light); border-radius: 9999px; padding: 2px 9px; display: inline-block; margin-bottom: 8px; }
-.gcard-tags        { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
-.gcard-tag         { font-size: 0.72rem; font-weight: 600; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 9999px; padding: 2px 9px; }
-.gcard-footer      { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+.gcard-footer      { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
 .gcard-price       { font-weight: 800; color: var(--price); font-size: 1rem; letter-spacing: -0.2px; }
 
 .empty-state  { grid-column: 1/-1; text-align: center; padding: 48px 24px; color: var(--muted); }
