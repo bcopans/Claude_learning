@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { clearSession } from '@/lib/auth';
 import { C } from '@/lib/constants';
+import { useEffect, useState } from 'react';
 
 interface Props {
   rsvped: boolean;
@@ -11,6 +12,20 @@ interface Props {
 export default function TopNav({ rsvped }: Props) {
   const pathname = usePathname();
   const router = useRouter();
+  const [showRsvpPing, setShowRsvpPing] = useState(false);
+
+  useEffect(() => {
+    // Show a subtle indicator on the RSVP button if not yet RSVPd
+    setShowRsvpPing(!rsvped);
+  }, [rsvped]);
+
+  const goRsvp = () => {
+    if (pathname === '/explore') {
+      document.getElementById('rsvp')?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      router.push('/explore?section=rsvp');
+    }
+  };
 
   const signOut = () => {
     clearSession();
@@ -75,6 +90,24 @@ export default function TopNav({ rsvped }: Props) {
         {navItem('/explore', 'Explore')}
         {navItem('/shrine', 'Shrine')}
         {navItem('/members', 'Members', !rsvped)}
+        {!rsvped && (
+          <button
+            onClick={goRsvp}
+            style={{
+              background: C.coral,
+              border: 'none',
+              borderRadius: 99,
+              cursor: 'pointer',
+              fontFamily: "'Space Grotesk', system-ui, sans-serif",
+              fontSize: 12,
+              fontWeight: 700,
+              color: C.greenDeep,
+              padding: '4px 12px',
+            }}
+          >
+            RSVP →
+          </button>
+        )}
         <button
           onClick={signOut}
           style={{

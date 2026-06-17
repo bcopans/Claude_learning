@@ -166,6 +166,41 @@ function ExploreContent({ session }: { session: SessionWithRsvp }) {
 
   return (
     <div>
+      {/* RSVP banner — visible before RSVPing */}
+      {!rsvped && (
+        <div
+          style={{
+            background: C.coral,
+            padding: '12px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 14,
+            flexWrap: 'wrap',
+          }}
+        >
+          <span style={{ color: C.greenDeep, fontSize: 14, fontWeight: 700 }}>
+            RSVP deadline: July 31, 2026
+          </span>
+          <button
+            onClick={() => document.getElementById('rsvp')?.scrollIntoView({ behavior: 'smooth' })}
+            style={{
+              background: C.greenDeep,
+              color: C.cream,
+              border: 'none',
+              borderRadius: 99,
+              padding: '6px 16px',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: FONT,
+            }}
+          >
+            Jump to RSVP ↓
+          </button>
+        </div>
+      )}
+
       {/* FAQ */}
       <Sec id="intro" bg={C.cream}>
         <Eyebrow>First time at Carnival? Read this</Eyebrow>
@@ -450,26 +485,44 @@ function ExploreContent({ session }: { session: SessionWithRsvp }) {
                 ? 'Noted with love. The Calf understands.'
                 : 'The members area is now unlocked — who\'s staying where, and the costume wall.'}
             </p>
-            {rsvpForm.attend !== 'no' && (
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+              {rsvpForm.attend !== 'no' && (
+                <button
+                  onClick={() => router.push('/members')}
+                  style={{
+                    background: C.mango,
+                    color: C.greenDeep,
+                    border: 'none',
+                    borderRadius: 99,
+                    fontFamily: FONT,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    padding: '13px 30px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Enter Members Area →
+                </button>
+              )}
               <button
-                onClick={() => router.push('/members')}
+                onClick={() => setRsvpDone(false)}
                 style={{
-                  background: C.mango,
-                  color: C.greenDeep,
-                  border: 'none',
+                  background: 'transparent',
+                  color: C.mint,
+                  border: `1px solid rgba(168,230,207,0.4)`,
                   borderRadius: 99,
                   fontFamily: FONT,
-                  fontWeight: 700,
-                  fontSize: 14,
-                  padding: '13px 30px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
+                  fontWeight: 500,
+                  fontSize: 13,
+                  padding: '13px 22px',
                   cursor: 'pointer',
                 }}
               >
-                Enter Members Area →
+                Change my RSVP
               </button>
-            )}
+            </div>
           </div>
         ) : (
           <>
@@ -633,7 +686,7 @@ function ExploreContent({ session }: { session: SessionWithRsvp }) {
                   cursor: rsvpLoading ? 'not-allowed' : 'pointer',
                 }}
               >
-                {rsvpLoading ? 'Saving…' : 'Count me in →'}
+                {rsvpLoading ? 'Saving…' : rsvped ? 'Update RSVP →' : 'Count me in →'}
               </button>
             </div>
           </>

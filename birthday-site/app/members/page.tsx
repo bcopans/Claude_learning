@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedLayout, { SessionWithRsvp } from '@/components/ProtectedLayout';
 import { C } from '@/lib/constants';
-import { supabase } from '@/lib/supabase';
 
 export default function MembersPage() {
   return (
@@ -18,14 +17,23 @@ const FONT = "'Space Grotesk', system-ui, sans-serif";
 
 interface Stay {
   id: string;
+  guest_code: string;
   name: string;
   hotel: string;
   arrive: string | null;
   depart: string | null;
 }
 
+interface Rsvp {
+  guest_code: string;
+  name: string;
+  attending: string;
+  hotel: string;
+}
+
 interface Photo {
   id: string;
+  guest_code: string;
   name: string;
   image_url: string;
 }
@@ -67,9 +75,7 @@ function MembersContent({ session }: { session: SessionWithRsvp }) {
             Who's staying where and the costume wall unlock once you RSVP yes.
           </p>
           <button
-            onClick={() => {
-              router.push('/explore?section=rsvp');
-            }}
+            onClick={() => router.push('/explore?section=rsvp')}
             style={{
               background: C.coral,
               color: C.greenDeep,
@@ -132,7 +138,7 @@ function MembersContent({ session }: { session: SessionWithRsvp }) {
         >
           {(
             [
-              ['stays', '🏨 Who\'s Where'],
+              ['stays', "🏨 Who's Where"],
               ['costumes', '📸 Costume Wall'],
             ] as [string, string][]
           ).map(([id, label]) => (
@@ -165,30 +171,45 @@ function MembersContent({ session }: { session: SessionWithRsvp }) {
 
 function StaysTab({ session }: { session: SessionWithRsvp }) {
   const [stays, setStays] = useState<Stay[]>([]);
-  const [hotel, setHotel] = useState('');
+  const [rsvps, setRsvps] = useState<Rsvp[]>([]);
+  const [hotel, setHotel] = useState('Undecided');
   const [arrive, setArrive] = useState('');
   const [depart, setDepart] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [hasPosted, setHasPosted] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/stays')
-      .then((r) => r.json())
-      .then(({ stays }) => setStays(stays || []))
+    Promise.all([
+      fetch('/api/stays').then((r) => r.json()),
+      fetch('/api/rsvps').then((r) => r.json()),
+    ])
+      .then(([stayData, rsvpData]) => {
+        const loadedStays: Stay[] = stayData.stays || [];
+        const loadedRsvps: Rsvp[] = rsvpData.rsvps || [];
+        setStays(loadedStays);
+        setRsvps(loadedRsvps);
+
+        const myStay = loadedStays.find((s) => s.guest_code === session.code);
+        if (myStay) {
+          setHotel(myStay.hotel);
+          setArrive(myStay.arrive || '');
+          setDepart(myStay.depart || '');
+          setHasPosted(true);
+        }
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
+  }, [session.code]);
 
-    // Pre-fill with guest's existing stay
-    const myStay = stays.find((s) => s.name === session.name);
-    if (myStay) {
-      setHotel(myStay.hotel);
-      setArrive(myStay.arrive || '');
-      setDepart(myStay.depart || '');
-    }
-  }, [session.name]);
+  const refreshStays = async () => {
+    const r = await fetch('/api/stays');
+    const d = await r.json();
+    setStays(d.stays || []);
+  };
 
   const save = async () => {
-    if (!hotel) return;
     setSaving(true);
     try {
       const res = await fetch('/api/stays', {
@@ -203,13 +224,33 @@ function StaysTab({ session }: { session: SessionWithRsvp }) {
         }),
       });
       if (res.ok) {
-        const r = await fetch('/api/stays');
-        const d = await r.json();
-        setStays(d.stays || []);
+        await refreshStays();
+        setHasPosted(true);
       }
     } catch {
     } finally {
       setSaving(false);
+    }
+  };
+
+  const deleteStay = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/stays', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guest_code: session.code }),
+      });
+      if (res.ok) {
+        await refreshStays();
+        setHasPosted(false);
+        setHotel('Undecided');
+        setArrive('');
+        setDepart('');
+      }
+    } catch {
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -235,6 +276,12 @@ function StaysTab({ session }: { session: SessionWithRsvp }) {
     boxSizing: 'border-box',
     colorScheme: 'dark' as 'dark',
   };
+
+  // Merge RSVPs with stays: everyone who said yes gets a row
+  const attendees = rsvps.map((r) => {
+    const stay = stays.find((s) => s.guest_code === r.guest_code);
+    return { ...r, stay: stay || null };
+  });
 
   return (
     <div style={{ maxWidth: 560, margin: '0 auto' }}>
@@ -291,41 +338,85 @@ function StaysTab({ session }: { session: SessionWithRsvp }) {
             />
           </div>
         </div>
-        <button
-          onClick={save}
-          disabled={saving || !hotel}
-          style={{
-            background: saving ? '#a04040' : C.coral,
-            color: C.greenDeep,
-            border: 'none',
-            borderRadius: 8,
-            padding: '10px 20px',
-            fontWeight: 700,
-            fontSize: 13,
-            cursor: saving ? 'not-allowed' : 'pointer',
-            fontFamily: FONT,
-          }}
-        >
-          {saving ? 'Saving…' : 'Post my stay'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={save}
+            disabled={saving}
+            style={{
+              background: saving ? '#a04040' : C.coral,
+              color: C.greenDeep,
+              border: 'none',
+              borderRadius: 8,
+              padding: '10px 20px',
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: saving ? 'not-allowed' : 'pointer',
+              fontFamily: FONT,
+            }}
+          >
+            {saving ? 'Saving…' : hasPosted ? 'Update my stay' : 'Post my stay'}
+          </button>
+          {hasPosted && (
+            <button
+              onClick={deleteStay}
+              disabled={deleting}
+              style={{
+                background: 'none',
+                color: 'rgba(255,248,231,0.5)',
+                border: '0.5px solid rgba(255,248,231,0.25)',
+                borderRadius: 8,
+                padding: '10px 16px',
+                fontWeight: 600,
+                fontSize: 13,
+                cursor: deleting ? 'not-allowed' : 'pointer',
+                fontFamily: FONT,
+              }}
+            >
+              {deleting ? 'Deleting…' : 'Delete my stay'}
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (
         <div style={{ textAlign: 'center', color: C.mint, fontSize: 13 }}>Loading…</div>
-      ) : stays.length === 0 ? (
+      ) : attendees.length === 0 ? (
         <div style={{ textAlign: 'center', color: C.mint, fontSize: 13, marginTop: 16 }}>
-          No one's posted yet — be the first.
+          No one's RSVPd yet.
         </div>
       ) : (
-        stays.map((s) => (
-          <div key={s.id} style={card}>
-            <strong style={{ color: C.cream }}>{s.name}</strong>{' '}
-            <span style={{ color: C.mango, fontWeight: 700 }}>· {s.hotel}</span>
-            <div style={{ fontSize: 13, color: C.mint, marginTop: 4 }}>
-              📅 {fmt(s.arrive)} → {fmt(s.depart)}
-            </div>
+        <>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: C.mango,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              marginBottom: 8,
+            }}
+          >
+            Who's coming ({attendees.length})
           </div>
-        ))
+          {attendees.map((a) => (
+            <div key={a.guest_code} style={card}>
+              <strong style={{ color: C.cream }}>{a.name}</strong>
+              {a.stay ? (
+                <>
+                  {' '}
+                  <span style={{ color: C.mango, fontWeight: 700 }}>· {a.stay.hotel}</span>
+                  <div style={{ fontSize: 13, color: C.mint, marginTop: 4 }}>
+                    📅 {fmt(a.stay.arrive)} → {fmt(a.stay.depart)}
+                  </div>
+                </>
+              ) : (
+                <span style={{ fontSize: 13, color: 'rgba(255,248,231,0.35)', marginLeft: 6 }}>
+                  · stay TBD
+                </span>
+              )}
+            </div>
+          ))}
+        </>
       )}
     </div>
   );
@@ -334,7 +425,10 @@ function StaysTab({ session }: { session: SessionWithRsvp }) {
 function CostumeWallTab({ session }: { session: SessionWithRsvp }) {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/costumes')
@@ -344,39 +438,56 @@ function CostumeWallTab({ session }: { session: SessionWithRsvp }) {
       .finally(() => setLoading(false));
   }, []);
 
+  const refreshPhotos = async () => {
+    const r = await fetch('/api/costumes');
+    const d = await r.json();
+    setPhotos(d.photos || []);
+  };
+
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setError(null);
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const path = `costumes/${session.code}-${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from('costume-photos')
-        .upload(path, file, { upsert: false });
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('guest_code', session.code);
+      formData.append('guest_name', session.name);
 
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('costume-photos').getPublicUrl(path);
-
-      await fetch('/api/costumes', {
+      const res = await fetch('/api/costumes/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          guest_code: session.code,
-          name: session.name,
-          image_url: urlData.publicUrl,
-        }),
+        body: formData,
       });
 
-      const r = await fetch('/api/costumes');
-      const d = await r.json();
-      setPhotos(d.photos || []);
-    } catch (err) {
-      console.error('Upload failed:', err);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Upload failed. Please try again.');
+      } else {
+        await refreshPhotos();
+      }
+    } catch {
+      setError('Upload failed. Please try again.');
     } finally {
       setUploading(false);
-      e.target.value = '';
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  const deletePhoto = async (photoId: string) => {
+    setDeletingId(photoId);
+    try {
+      const res = await fetch('/api/costumes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: photoId, guest_code: session.code }),
+      });
+      if (res.ok) {
+        await refreshPhotos();
+      }
+    } catch {
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -398,8 +509,9 @@ function CostumeWallTab({ session }: { session: SessionWithRsvp }) {
         >
           {uploading ? 'Uploading…' : '📸 Upload your look'}
           <input
+            ref={inputRef}
             type="file"
-            accept="image/*"
+            accept=".jpg,.jpeg,.png,.gif,.webp,.heic,.heif,image/*"
             onChange={onPick}
             style={{ display: 'none' }}
             disabled={uploading}
@@ -408,6 +520,23 @@ function CostumeWallTab({ session }: { session: SessionWithRsvp }) {
         <div style={{ fontSize: 12, color: C.mint, marginTop: 8 }}>
           Birds, gods, or cowboys — show the group your costumes.
         </div>
+        <div style={{ fontSize: 11, color: 'rgba(255,248,231,0.4)', marginTop: 4 }}>
+          Supported: JPG, PNG, GIF, WebP, HEIC
+        </div>
+        {error && (
+          <div
+            style={{
+              fontSize: 13,
+              color: C.coral,
+              marginTop: 10,
+              background: 'rgba(255,100,80,0.1)',
+              borderRadius: 8,
+              padding: '8px 14px',
+            }}
+          >
+            {error}
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -427,6 +556,7 @@ function CostumeWallTab({ session }: { session: SessionWithRsvp }) {
                 borderRadius: 12,
                 overflow: 'hidden',
                 border: '0.5px solid rgba(255,248,231,0.2)',
+                position: 'relative',
               }}
             >
               <img
@@ -444,6 +574,27 @@ function CostumeWallTab({ session }: { session: SessionWithRsvp }) {
               >
                 {p.name}
               </div>
+              {p.guest_code === session.code && (
+                <button
+                  onClick={() => deletePhoto(p.id)}
+                  disabled={deletingId === p.id}
+                  style={{
+                    position: 'absolute',
+                    top: 6,
+                    right: 6,
+                    background: 'rgba(0,0,0,0.6)',
+                    color: C.cream,
+                    border: 'none',
+                    borderRadius: 6,
+                    fontSize: 11,
+                    padding: '3px 7px',
+                    cursor: deletingId === p.id ? 'not-allowed' : 'pointer',
+                    fontFamily: FONT,
+                  }}
+                >
+                  {deletingId === p.id ? '…' : '✕'}
+                </button>
+              )}
             </div>
           ))}
         </div>

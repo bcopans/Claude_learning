@@ -58,17 +58,19 @@ function ShrineContent({ session }: { session: SessionWithRsvp }) {
     }
   };
 
-  const playSound = useCallback(
-    (crowdCheer = false) => {
+  const speak = useCallback(
+    (text: string, crowdCheer = false) => {
       if (muted) return;
-      const files = crowdCheer
-        ? ['/sfx/crowd-cheer.wav']
-        : ['/sfx/yass.wav', '/sfx/tongue-pop.wav', '/sfx/gay-gasp.wav', '/sfx/airhorn.wav', '/sfx/sparkle.wav'];
-      const file = files[Math.floor(Math.random() * files.length)];
-      try {
-        const audio = new Audio(file);
-        audio.play().catch(() => {});
-      } catch {}
+      if (crowdCheer) {
+        try { new Audio('/sfx/crowd-cheer.wav').play().catch(() => {}); } catch {}
+        return;
+      }
+      if (typeof window === 'undefined' || !window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1.05;
+      u.pitch = 1.1;
+      window.speechSynthesis.speak(u);
     },
     [muted]
   );
@@ -107,9 +109,9 @@ function ShrineContent({ session }: { session: SessionWithRsvp }) {
       setLegend(true);
       if (legendTimer.current) clearTimeout(legendTimer.current);
       legendTimer.current = setTimeout(() => setLegend(false), 3500);
-      playSound(true);
+      speak('FORTY! FORTY! FORTY!', true);
     } else {
-      playSound(false);
+      speak(reactionText);
     }
 
     try {
@@ -180,7 +182,7 @@ function ShrineContent({ session }: { session: SessionWithRsvp }) {
           {[
             ['Offerings', totalCount],
             ['Most loved', topLabel || '—'],
-            ['Legend in', `${40 - (totalCount % 40 || 40)}`],
+            ['Next legend', `#${Math.ceil((totalCount + 1) / 40) * 40}`],
           ].map(([l, v], i) => (
             <div
               key={i}
