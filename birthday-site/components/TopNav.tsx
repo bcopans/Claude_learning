@@ -7,9 +7,10 @@ import { useEffect, useState } from 'react';
 
 interface Props {
   rsvped: boolean;
+  isAdmin?: boolean;
 }
 
-export default function TopNav({ rsvped }: Props) {
+export default function TopNav({ rsvped, isAdmin }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [showRsvpPing, setShowRsvpPing] = useState(false);
@@ -90,6 +91,7 @@ export default function TopNav({ rsvped }: Props) {
         {navItem('/explore', 'Explore')}
         {navItem('/shrine', 'Shrine')}
         {navItem('/members', 'Members', !rsvped)}
+        {isAdmin && navItem('/admin', 'Admin')}
         {!rsvped && (
           <button
             onClick={goRsvp}

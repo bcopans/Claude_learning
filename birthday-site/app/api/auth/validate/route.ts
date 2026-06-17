@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   const db = supabaseAdmin();
   const { data, error } = await db
     .from('guests')
-    .select('code, name, active')
+    .select('code, name, active, is_admin')
     .eq('code', code.trim().toUpperCase())
     .single();
 
@@ -21,5 +21,5 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  return NextResponse.json({ name: data.name, code: data.code });
+  return NextResponse.json({ name: data.name, code: data.code, isAdmin: !!data.is_admin });
 }

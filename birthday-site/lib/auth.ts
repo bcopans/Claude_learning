@@ -4,6 +4,7 @@ export interface GuestSession {
   code: string;
   name: string;
   rsvped?: boolean;
+  isAdmin?: boolean;
 }
 
 export function getSession(): GuestSession | null {

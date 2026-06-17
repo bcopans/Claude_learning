@@ -1,7 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import ProtectedLayout, { SessionWithRsvp } from '@/components/ProtectedLayout';
 import { C, OFFERINGS } from '@/lib/constants';
+
+export default function AdminPage() {
+  return (
+    <ProtectedLayout>
+      {(session) => <AdminContent session={session} />}
+    </ProtectedLayout>
+  );
+}
 
 const FONT = "'Space Grotesk', system-ui, sans-serif";
 
@@ -9,6 +18,7 @@ interface Guest {
   code: string;
   name: string;
   active: boolean;
+  is_admin: boolean;
   created_at: string;
 }
 
@@ -41,10 +51,7 @@ interface OfferingRow {
   offering_type: string;
 }
 
-export default function AdminPage() {
-  const [authed, setAuthed] = useState(false);
-  const [password, setPassword] = useState('');
-  const [pwError, setPwError] = useState('');
+function AdminContent({ session }: { session: SessionWithRsvp }) {
   const [tab, setTab] = useState<'guests' | 'rsvps' | 'stays' | 'shrine'>('guests');
 
   const [guests, setGuests] = useState<Guest[]>([]);
@@ -58,29 +65,21 @@ export default function AdminPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
 
-  const headers = () => ({ 'Content-Type': 'application/json', 'x-admin-password': password });
+  const [editingCode, setEditingCode] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
-  const login = async () => {
-    setPwError('');
-    const res = await fetch('/api/admin/guests', { headers: { 'x-admin-password': password } });
-    if (res.status === 401) {
-      setPwError('Wrong password.');
-      return;
-    }
-    const d = await res.json();
-    setGuests(d.guests || []);
-    setAuthed(true);
-    fetchData();
-  };
+  const authHeader = { 'x-guest-code': session.code };
+  const jsonHeaders = { 'Content-Type': 'application/json', ...authHeader };
 
   const fetchGuests = async () => {
-    const res = await fetch('/api/admin/guests', { headers: { 'x-admin-password': password } });
+    const res = await fetch('/api/admin/guests', { headers: authHeader });
     const d = await res.json();
     setGuests(d.guests || []);
   };
 
   const fetchData = async () => {
-    const res = await fetch('/api/admin/data', { headers: { 'x-admin-password': password } });
+    const res = await fetch('/api/admin/data', { headers: authHeader });
     if (!res.ok) return;
     const d = await res.json();
     setRsvps(d.rsvps || []);
@@ -89,13 +88,54 @@ export default function AdminPage() {
     setOfferings(d.offerings || []);
   };
 
+  useEffect(() => {
+    if (session.isAdmin) {
+      fetchGuests();
+      fetchData();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.isAdmin]);
+
+  if (!session.isAdmin) {
+    return (
+      <div
+        style={{
+          background: C.green,
+          minHeight: 'calc(100vh - 49px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 24,
+          fontFamily: FONT,
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
+          <div
+            style={{
+              fontFamily: "'Archivo Black', sans-serif",
+              fontSize: 22,
+              color: C.cream,
+              textTransform: 'uppercase',
+            }}
+          >
+            Admin only
+          </div>
+          <p style={{ color: C.mint, fontSize: 14, marginTop: 8 }}>
+            You don't have admin access. Ask Ben.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const createGuest = async () => {
     setCreateError('');
     if (!newName.trim()) { setCreateError('Name required.'); return; }
     setCreating(true);
     const res = await fetch('/api/admin/guests', {
       method: 'POST',
-      headers: headers(),
+      headers: jsonHeaders,
       body: JSON.stringify({ name: newName.trim(), code: newCode.trim() || undefined }),
     });
     const d = await res.json();
@@ -109,96 +149,46 @@ export default function AdminPage() {
     setCreating(false);
   };
 
-  const toggleGuest = async (code: string, active: boolean) => {
+  const toggleActive = async (code: string, active: boolean) => {
     await fetch('/api/admin/guests', {
       method: 'PATCH',
-      headers: headers(),
+      headers: jsonHeaders,
       body: JSON.stringify({ code, active }),
     });
     await fetchGuests();
   };
 
-  const deleteGuest = async (code: string) => {
-    if (!confirm(`Delete guest ${code}? This cannot be undone.`)) return;
+  const toggleAdmin = async (code: string, is_admin: boolean) => {
     await fetch('/api/admin/guests', {
-      method: 'DELETE',
-      headers: headers(),
-      body: JSON.stringify({ code }),
+      method: 'PATCH',
+      headers: jsonHeaders,
+      body: JSON.stringify({ code, is_admin }),
     });
     await fetchGuests();
   };
 
-  if (!authed) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: C.greenDeep,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 24,
-          fontFamily: FONT,
-        }}
-      >
-        <div style={{ maxWidth: 360, width: '100%', textAlign: 'center' }}>
-          <div
-            style={{
-              fontFamily: "'Archivo Black', sans-serif",
-              fontSize: 22,
-              color: C.cream,
-              marginBottom: 8,
-              textTransform: 'uppercase',
-            }}
-          >
-            Admin
-          </div>
-          <p style={{ color: C.mint, fontSize: 13, marginBottom: 20 }}>
-            Ben's eyes only. Enter the admin password.
-          </p>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => { setPassword(e.target.value); setPwError(''); }}
-            onKeyDown={(e) => e.key === 'Enter' && login()}
-            placeholder="Password"
-            style={{
-              width: '100%',
-              padding: '12px 14px',
-              borderRadius: 8,
-              border: `1px solid ${pwError ? C.coral : '#1d6b54'}`,
-              background: 'rgba(255,248,231,0.07)',
-              color: C.cream,
-              fontSize: 16,
-              fontFamily: FONT,
-              boxSizing: 'border-box',
-              outline: 'none',
-              marginBottom: 8,
-            }}
-          />
-          {pwError && <div style={{ color: C.coral, fontSize: 13, marginBottom: 8 }}>{pwError}</div>}
-          <button
-            onClick={login}
-            style={{
-              width: '100%',
-              padding: 13,
-              background: C.coral,
-              color: C.greenDeep,
-              border: 'none',
-              borderRadius: 8,
-              fontFamily: FONT,
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: 'pointer',
-              textTransform: 'uppercase',
-            }}
-          >
-            Enter →
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const saveName = async (code: string) => {
+    if (!editingName.trim()) return;
+    setSavingEdit(true);
+    await fetch('/api/admin/guests', {
+      method: 'PATCH',
+      headers: jsonHeaders,
+      body: JSON.stringify({ code, name: editingName.trim() }),
+    });
+    setSavingEdit(false);
+    setEditingCode(null);
+    await fetchGuests();
+  };
+
+  const deleteGuest = async (code: string, name: string) => {
+    if (!confirm(`Delete ${name} (${code})? This cannot be undone.`)) return;
+    await fetch('/api/admin/guests', {
+      method: 'DELETE',
+      headers: jsonHeaders,
+      body: JSON.stringify({ code }),
+    });
+    await fetchGuests();
+  };
 
   const attending = rsvps.filter((r) => r.attending === 'yes');
   const notAttending = rsvps.filter((r) => r.attending === 'no');
@@ -219,50 +209,36 @@ export default function AdminPage() {
     ['shrine', '🐂 Shrine Activity'],
   ];
 
+  const btn: React.CSSProperties = {
+    padding: '4px 10px',
+    borderRadius: 6,
+    border: '1px solid #ccc',
+    background: '#fff',
+    fontSize: 12,
+    cursor: 'pointer',
+    fontFamily: FONT,
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: C.cream, fontFamily: FONT }}>
-      <div
-        style={{
-          background: C.greenDeep,
-          padding: '14px 24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
+    <div style={{ minHeight: 'calc(100vh - 49px)', background: C.cream, fontFamily: FONT }}>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 20px' }}>
         <div
           style={{
             fontFamily: "'Archivo Black', sans-serif",
-            fontSize: 16,
-            color: C.cream,
+            fontSize: 20,
+            color: C.green,
             textTransform: 'uppercase',
+            marginBottom: 20,
           }}
         >
           Rio '27 Admin
         </div>
-        <button
-          onClick={() => { setAuthed(false); setPassword(''); }}
-          style={{
-            background: 'none',
-            border: '1px solid rgba(255,248,231,0.3)',
-            borderRadius: 6,
-            color: 'rgba(255,248,231,0.6)',
-            fontSize: 12,
-            cursor: 'pointer',
-            padding: '3px 10px',
-            fontFamily: FONT,
-          }}
-        >
-          sign out
-        </button>
-      </div>
 
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 20px' }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 28 }}>
           {tabs.map(([id, label]) => (
             <button
               key={id}
-              onClick={() => { setTab(id as typeof tab); if (id !== 'guests') fetchData(); }}
+              onClick={() => setTab(id as typeof tab)}
               style={{
                 padding: '8px 14px',
                 borderRadius: 99,
@@ -272,7 +248,7 @@ export default function AdminPage() {
                 fontFamily: FONT,
                 border: tab === id ? `2px solid ${C.green}` : '1px solid #ccc',
                 background: tab === id ? C.green : '#fff',
-                color: tab === id ? C.cream : C.ink,
+                color: tab === id ? C.cream : C.green,
               }}
             >
               {label}
@@ -287,7 +263,6 @@ export default function AdminPage() {
               Guest Codes
             </h2>
 
-            {/* Create guest */}
             <div
               style={{
                 background: '#fff',
@@ -302,82 +277,44 @@ export default function AdminPage() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10, alignItems: 'end' }}>
                 <div>
-                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>
-                    Name *
-                  </label>
+                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Name *</label>
                   <input
                     value={newName}
                     onChange={(e) => { setNewName(e.target.value); setCreateError(''); }}
+                    onKeyDown={(e) => e.key === 'Enter' && createGuest()}
                     placeholder="Dalton"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #ccc',
-                      borderRadius: 8,
-                      fontSize: 16,
-                      fontFamily: FONT,
-                      boxSizing: 'border-box',
-                    }}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #ccc', borderRadius: 8, fontSize: 16, fontFamily: FONT, boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>
-                    Code (auto-gen if blank)
-                  </label>
+                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Code (auto-gen if blank)</label>
                   <input
                     value={newCode}
                     onChange={(e) => setNewCode(e.target.value.toUpperCase())}
                     placeholder="BEN-DALTON"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #ccc',
-                      borderRadius: 8,
-                      fontSize: 16,
-                      fontFamily: FONT,
-                      boxSizing: 'border-box',
-                      textTransform: 'uppercase',
-                    }}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #ccc', borderRadius: 8, fontSize: 16, fontFamily: FONT, boxSizing: 'border-box', textTransform: 'uppercase' }}
                   />
                 </div>
                 <button
                   onClick={createGuest}
                   disabled={creating}
-                  style={{
-                    padding: '10px 18px',
-                    background: C.green,
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 8,
-                    fontWeight: 700,
-                    fontSize: 14,
-                    cursor: creating ? 'not-allowed' : 'pointer',
-                    fontFamily: FONT,
-                    whiteSpace: 'nowrap',
-                  }}
+                  style={{ padding: '10px 18px', background: C.green, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: creating ? 'not-allowed' : 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}
                 >
                   {creating ? '…' : 'Add →'}
                 </button>
               </div>
-              {createError && (
-                <div style={{ color: C.coral, fontSize: 13, marginTop: 8 }}>{createError}</div>
-              )}
-              <p style={{ fontSize: 12, color: '#888', marginTop: 10, margin: '10px 0 0' }}>
-                The code is what your friend enters at the gate. It's tied to their name — they
-                won't be prompted to enter their name separately.
+              {createError && <div style={{ color: C.coral, fontSize: 13, marginTop: 8 }}>{createError}</div>}
+              <p style={{ fontSize: 12, color: '#888', margin: '10px 0 0' }}>
+                The code is what your friend enters at the gate. It's tied to their name.
               </p>
             </div>
 
-            {/* Guest list */}
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                 <thead>
                   <tr style={{ background: C.green, color: C.cream }}>
-                    {['Name', 'Code', 'Status', 'Added', 'Actions'].map((h) => (
-                      <th
-                        key={h}
-                        style={{ padding: '10px 14px', textAlign: 'left', fontFamily: "'Archivo Black', sans-serif", fontSize: 12, letterSpacing: '0.05em' }}
-                      >
+                    {['Name', 'Code', 'Status', 'Admin', 'Added', 'Actions'].map((h) => (
+                      <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontFamily: "'Archivo Black', sans-serif", fontSize: 12, letterSpacing: '0.05em' }}>
                         {h}
                       </th>
                     ))}
@@ -385,77 +322,76 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {guests.map((g, i) => (
-                    <tr
-                      key={g.code}
-                      style={{ background: i % 2 === 0 ? '#fff' : '#f8f5ee', borderBottom: '1px solid #eee' }}
-                    >
-                      <td style={{ padding: '10px 14px', fontWeight: 700 }}>{g.name}</td>
-                      <td
-                        style={{
-                          padding: '10px 14px',
-                          fontFamily: 'monospace',
-                          fontSize: 13,
-                          background: '#f0f0f0',
-                          userSelect: 'all',
-                        }}
-                      >
+                    <tr key={g.code} style={{ background: i % 2 === 0 ? '#fff' : '#f8f5ee', borderBottom: '1px solid #eee' }}>
+                      <td style={{ padding: '10px 14px', fontWeight: 700 }}>
+                        {editingCode === g.code ? (
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <input
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && saveName(g.code)}
+                              autoFocus
+                              style={{ padding: '4px 8px', border: '1px solid #aaa', borderRadius: 6, fontSize: 14, fontFamily: FONT, width: 120 }}
+                            />
+                            <button onClick={() => saveName(g.code)} disabled={savingEdit} style={{ ...btn, background: C.green, color: '#fff', border: 'none' }}>
+                              {savingEdit ? '…' : 'Save'}
+                            </button>
+                            <button onClick={() => setEditingCode(null)} style={btn}>✕</button>
+                          </div>
+                        ) : (
+                          <span>{g.name}</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontSize: 13, background: '#f0f0f0', userSelect: 'all' }}>
                         {g.code}
                       </td>
                       <td style={{ padding: '10px 14px' }}>
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            padding: '3px 8px',
-                            borderRadius: 99,
-                            background: g.active ? '#dcf5e9' : '#fee',
-                            color: g.active ? '#0a5c35' : '#c00',
-                          }}
-                        >
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: g.active ? '#dcf5e9' : '#fee', color: g.active ? '#0a5c35' : '#c00' }}>
                           {g.active ? 'Active' : 'Inactive'}
                         </span>
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>
+                        {g.is_admin && (
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: '#e8f0fe', color: '#1a56db' }}>
+                            Admin
+                          </span>
+                        )}
                       </td>
                       <td style={{ padding: '10px 14px', fontSize: 12, color: '#888' }}>
                         {new Date(g.created_at).toLocaleDateString()}
                       </td>
                       <td style={{ padding: '10px 14px' }}>
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <button
-                            onClick={() => toggleGuest(g.code, !g.active)}
-                            style={{
-                              padding: '4px 10px',
-                              borderRadius: 6,
-                              border: '1px solid #ccc',
-                              background: '#fff',
-                              fontSize: 12,
-                              cursor: 'pointer',
-                              fontFamily: FONT,
-                            }}
+                            onClick={() => { setEditingCode(g.code); setEditingName(g.name); }}
+                            style={btn}
                           >
+                            Edit name
+                          </button>
+                          <button onClick={() => toggleActive(g.code, !g.active)} style={btn}>
                             {g.active ? 'Deactivate' : 'Reactivate'}
                           </button>
                           <button
-                            onClick={() => deleteGuest(g.code)}
-                            style={{
-                              padding: '4px 10px',
-                              borderRadius: 6,
-                              border: '1px solid #fcc',
-                              background: '#fff8f8',
-                              color: '#c00',
-                              fontSize: 12,
-                              cursor: 'pointer',
-                              fontFamily: FONT,
-                            }}
+                            onClick={() => toggleAdmin(g.code, !g.is_admin)}
+                            style={{ ...btn, color: g.is_admin ? '#c00' : '#1a56db', borderColor: g.is_admin ? '#fcc' : '#b3c6f7' }}
                           >
-                            Delete
+                            {g.is_admin ? 'Remove admin' : 'Make admin'}
                           </button>
+                          {g.code !== session.code && (
+                            <button
+                              onClick={() => deleteGuest(g.code, g.name)}
+                              style={{ ...btn, border: '1px solid #fcc', background: '#fff8f8', color: '#c00' }}
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
                   ))}
                   {guests.length === 0 && (
                     <tr>
-                      <td colSpan={5} style={{ padding: 20, textAlign: 'center', color: '#888' }}>
+                      <td colSpan={6} style={{ padding: 20, textAlign: 'center', color: '#888' }}>
                         No guests yet. Add one above.
                       </td>
                     </tr>
@@ -479,26 +415,8 @@ export default function AdminPage() {
                 ['Fasano', hotelCounts['fasano'] || 0, C.mango],
                 ['Arpoador', hotelCounts['arpoador'] || 0, C.mango],
               ].map(([l, v, col]) => (
-                <div
-                  key={String(l)}
-                  style={{
-                    background: '#fff',
-                    border: '1px solid #ddd',
-                    borderRadius: 10,
-                    padding: '12px 18px',
-                    textAlign: 'center',
-                    minWidth: 90,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: "'Archivo Black', sans-serif",
-                      fontSize: 24,
-                      color: String(col),
-                    }}
-                  >
-                    {String(v)}
-                  </div>
+                <div key={String(l)} style={{ background: '#fff', border: '1px solid #ddd', borderRadius: 10, padding: '12px 18px', textAlign: 'center', minWidth: 90 }}>
+                  <div style={{ fontFamily: "'Archivo Black', sans-serif", fontSize: 24, color: String(col) }}>{String(v)}</div>
                   <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{String(l)}</div>
                 </div>
               ))}
@@ -550,9 +468,7 @@ export default function AdminPage() {
                   <div key={i} style={{ background: '#fff', border: '1px solid #ddd', borderRadius: 10, padding: '12px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
                     <div style={{ fontWeight: 700, flex: 1 }}>{s.name}</div>
                     <div style={{ color: C.green, fontWeight: 700 }}>{s.hotel}</div>
-                    <div style={{ fontSize: 13, color: '#888' }}>
-                      {s.arrive || '?'} → {s.depart || '?'}
-                    </div>
+                    <div style={{ fontSize: 13, color: '#888' }}>{s.arrive || '?'} → {s.depart || '?'}</div>
                   </div>
                 ))}
               </div>

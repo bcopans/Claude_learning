@@ -8,6 +8,7 @@ create table if not exists guests (
   code text primary key,
   name text not null,
   active boolean default true,
+  is_admin boolean default false,
   created_at timestamptz default now()
 );
 
@@ -99,9 +100,13 @@ create policy "Select costume photos" on costume_photos for select using (true);
 -- ============================================================
 -- Ben's guest code + initial seed
 -- ============================================================
-insert into guests (code, name, active) values
-  ('BEN-HOST', 'Ben', true)
-on conflict (code) do nothing;
+insert into guests (code, name, active, is_admin) values
+  ('BEN-HOST', 'Ben', true, true)
+on conflict (code) do update set is_admin = true;
+
+-- If upgrading an existing database, run this migration:
+-- alter table guests add column if not exists is_admin boolean default false;
+-- update guests set is_admin = true where code = 'BEN-HOST';
 
 -- Add more guests here or use the /admin panel:
 -- insert into guests (code, name, active) values ('BEN-DALTON', 'Dalton', true);

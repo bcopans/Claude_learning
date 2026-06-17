@@ -10,6 +10,7 @@ export interface SessionWithRsvp {
   code: string;
   name: string;
   rsvped: boolean;
+  isAdmin: boolean;
 }
 
 interface Props {
@@ -28,12 +29,13 @@ export default function ProtectedLayout({ children }: Props) {
       return;
     }
 
+    const isAdmin = !!s.isAdmin;
     const rsvpCache = localStorage.getItem(`rio27_rsvped_${s.code}`);
     if (rsvpCache === 'yes') {
-      setSession({ code: s.code, name: s.name, rsvped: true });
+      setSession({ code: s.code, name: s.name, rsvped: true, isAdmin });
       setChecking(false);
     } else {
-      setSession({ code: s.code, name: s.name, rsvped: false });
+      setSession({ code: s.code, name: s.name, rsvped: false, isAdmin });
       setChecking(false);
       // Async background check to update rsvped status
       fetch(`/api/rsvp?code=${s.code}`)
@@ -64,7 +66,7 @@ export default function ProtectedLayout({ children }: Props) {
 
   return (
     <div style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", background: C.cream, minHeight: '100vh' }}>
-      <TopNav rsvped={session.rsvped} />
+      <TopNav rsvped={session.rsvped} isAdmin={session.isAdmin} />
       {children(session)}
     </div>
   );

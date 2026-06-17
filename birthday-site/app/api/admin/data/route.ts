@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 
-function checkAdmin(req: NextRequest) {
-  const auth = req.headers.get('x-admin-password');
-  return auth === process.env.ADMIN_PASSWORD;
+async function checkAdmin(req: NextRequest): Promise<boolean> {
+  const code = req.headers.get('x-guest-code');
+  if (!code) return false;
+  const db = supabaseAdmin();
+  const { data } = await db
+    .from('guests')
+    .select('code')
+    .eq('code', code)
+    .eq('active', true)
+    .eq('is_admin', true)
+    .single();
+  return !!data;
 }
 
 export async function GET(req: NextRequest) {
-  if (!checkAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!(await checkAdmin(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const db = supabaseAdmin();
   const [rsvps, stays, costumes, offerings] = await Promise.all([

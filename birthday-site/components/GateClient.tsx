@@ -38,7 +38,7 @@ export default function GateClient() {
         setLoading(false);
         return;
       }
-      setSession({ code: data.code, name: data.name });
+      setSession({ code: data.code, name: data.name, isAdmin: !!data.isAdmin });
       router.push('/home');
     } catch {
       setError('Something went wrong. Try again.');
