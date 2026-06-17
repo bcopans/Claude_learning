@@ -14,7 +14,7 @@ export interface SessionWithRsvp {
 }
 
 interface Props {
-  children: (session: SessionWithRsvp) => React.ReactNode;
+  children: (session: SessionWithRsvp, onRsvped: () => void) => React.ReactNode;
 }
 
 export default function ProtectedLayout({ children }: Props) {
@@ -64,10 +64,16 @@ export default function ProtectedLayout({ children }: Props) {
     );
   }
 
+  const handleRsvped = () => {
+    if (!session) return;
+    localStorage.setItem(`rio27_rsvped_${session.code}`, 'yes');
+    setSession((prev) => prev ? { ...prev, rsvped: true } : prev);
+  };
+
   return (
     <div style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", background: C.cream, minHeight: '100vh' }}>
       <TopNav rsvped={session.rsvped} isAdmin={session.isAdmin} />
-      {children(session)}
+      {children(session, handleRsvped)}
     </div>
   );
 }

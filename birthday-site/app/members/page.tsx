@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import ProtectedLayout, { SessionWithRsvp } from '@/components/ProtectedLayout';
 import { C } from '@/lib/constants';
 
 export default function MembersPage() {
   return (
     <ProtectedLayout>
-      {(session) => <MembersContent session={session} />}
+      {(session, onRsvped) => <MembersContent session={session} onRsvped={onRsvped} />}
     </ProtectedLayout>
   );
 }
@@ -38,8 +37,138 @@ interface Photo {
   image_url: string;
 }
 
-function MembersContent({ session }: { session: SessionWithRsvp }) {
-  const router = useRouter();
+function LockedScreen({ session, onRsvped }: { session: SessionWithRsvp; onRsvped: () => void }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [declined, setDeclined] = useState(false);
+
+  const submitRsvp = async (attending: 'yes' | 'no') => {
+    setSubmitting(true);
+    try {
+      await fetch('/api/rsvp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guest_code: session.code, name: session.name, attending }),
+      });
+      if (attending === 'yes') {
+        onRsvped();
+      } else {
+        setDeclined(true);
+      }
+    } catch {
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div style={{ background: C.green, minHeight: 'calc(100vh - 49px)', padding: '40px 20px' }}>
+      <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
+        <div style={{ fontSize: 48, marginBottom: 14 }}>🔒</div>
+        <h1
+          style={{
+            fontFamily: "'Archivo Black', sans-serif",
+            fontSize: 'clamp(24px,5vw,34px)',
+            lineHeight: 1,
+            textTransform: 'uppercase',
+            color: C.cream,
+            margin: '0 0 14px',
+          }}
+        >
+          Members only
+        </h1>
+        <p style={{ fontSize: 15, color: C.mint, maxWidth: 360, margin: '0 auto 32px', lineHeight: 1.6 }}>
+          Who's staying where and the costume wall are for confirmed attendees.
+          RSVP yes below to unlock.
+        </p>
+
+        {declined ? (
+          <div
+            style={{
+              background: 'rgba(255,248,231,0.08)',
+              borderRadius: 14,
+              padding: '20px 24px',
+              color: C.mint,
+              fontSize: 15,
+              lineHeight: 1.6,
+            }}
+          >
+            No worries, {session.name}! You can always change your mind on the{' '}
+            <a
+              href="/explore"
+              style={{ color: C.mango, fontWeight: 700, textDecoration: 'none' }}
+            >
+              Explore page
+            </a>
+            .
+          </div>
+        ) : (
+          <div
+            style={{
+              background: 'rgba(255,248,231,0.07)',
+              borderRadius: 16,
+              padding: '28px 24px',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: C.mango,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                marginBottom: 20,
+              }}
+            >
+              Are you coming to Rio?
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                onClick={() => submitRsvp('yes')}
+                disabled={submitting}
+                style={{
+                  background: C.coral,
+                  color: C.greenDeep,
+                  border: 'none',
+                  borderRadius: 99,
+                  fontFamily: FONT,
+                  fontWeight: 700,
+                  fontSize: 15,
+                  padding: '14px 30px',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  opacity: submitting ? 0.7 : 1,
+                }}
+              >
+                {submitting ? 'Saving…' : "Yes, I'm coming! →"}
+              </button>
+              <button
+                onClick={() => submitRsvp('no')}
+                disabled={submitting}
+                style={{
+                  background: 'none',
+                  color: 'rgba(255,248,231,0.45)',
+                  border: '0.5px solid rgba(255,248,231,0.2)',
+                  borderRadius: 99,
+                  fontFamily: FONT,
+                  fontWeight: 600,
+                  fontSize: 13,
+                  padding: '11px 24px',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Can't make it
+              </button>
+            </div>
+            <p style={{ fontSize: 12, color: 'rgba(255,248,231,0.3)', marginTop: 16 }}>
+              You can update your RSVP any time on the Explore page.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MembersContent({ session, onRsvped }: { session: SessionWithRsvp; onRsvped: () => void }) {
   const [tab, setTab] = useState<'stays' | 'costumes'>('stays');
 
   useEffect(() => {
@@ -47,54 +176,7 @@ function MembersContent({ session }: { session: SessionWithRsvp }) {
   }, []);
 
   if (!session.rsvped) {
-    return (
-      <div style={{ background: C.green, minHeight: 'calc(100vh - 49px)', padding: '40px 20px' }}>
-        <div style={{ maxWidth: 760, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
-          <div style={{ fontSize: 54, marginBottom: 14 }}>🔒</div>
-          <h1
-            style={{
-              fontFamily: "'Archivo Black', sans-serif",
-              fontSize: 'clamp(26px,5vw,38px)',
-              lineHeight: 1,
-              textTransform: 'uppercase',
-              color: C.cream,
-              margin: '0 0 20px',
-            }}
-          >
-            Members only
-          </h1>
-          <p
-            style={{
-              fontSize: 16,
-              color: C.mint,
-              maxWidth: 380,
-              margin: '0 auto 22px',
-              lineHeight: 1.6,
-            }}
-          >
-            Who's staying where and the costume wall unlock once you RSVP yes.
-          </p>
-          <button
-            onClick={() => router.push('/explore?section=rsvp')}
-            style={{
-              background: C.coral,
-              color: C.greenDeep,
-              border: 'none',
-              borderRadius: 99,
-              fontFamily: FONT,
-              fontWeight: 700,
-              fontSize: 14,
-              padding: '13px 30px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-              cursor: 'pointer',
-            }}
-          >
-            Go RSVP →
-          </button>
-        </div>
-      </div>
-    );
+    return <LockedScreen session={session} onRsvped={onRsvped} />;
   }
 
   return (
