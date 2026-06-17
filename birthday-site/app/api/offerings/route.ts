@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { NextRequest, NextResponse } from 'next/server';import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET() {
   const db = supabaseAdmin();
@@ -48,4 +47,24 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ offering: data });
+}
+
+export async function DELETE(req: NextRequest) {
+  const db = supabaseAdmin();
+
+  // Verify caller is an admin guest
+  const code = req.headers.get('x-guest-code');
+  if (!code) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { data: admin } = await db
+    .from('guests')
+    .select('code')
+    .eq('code', code)
+    .eq('active', true)
+    .eq('is_admin', true)
+    .single();
+  if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { error } = await db.from('offerings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
 }

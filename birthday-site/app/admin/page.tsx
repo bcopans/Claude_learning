@@ -68,6 +68,7 @@ function AdminContent({ session }: { session: SessionWithRsvp }) {
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [clearingShrine, setClearingShrine] = useState(false);
 
   const authHeader = { 'x-guest-code': session.code };
   const jsonHeaders = { 'Content-Type': 'application/json', ...authHeader };
@@ -498,7 +499,22 @@ function AdminContent({ session }: { session: SessionWithRsvp }) {
             <h2 style={{ fontFamily: "'Archivo Black', sans-serif", fontSize: 22, color: C.green, marginBottom: 8, textTransform: 'uppercase' }}>
               Shrine Activity
             </h2>
-            <p style={{ color: '#666', marginBottom: 20 }}>Total offerings: <strong>{offerings.length}</strong></p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+              <p style={{ color: '#666', margin: 0 }}>Total offerings: <strong>{offerings.length}</strong></p>
+              <button
+                onClick={async () => {
+                  if (!confirm('Clear ALL shrine offerings? This cannot be undone.')) return;
+                  setClearingShrine(true);
+                  await fetch('/api/offerings', { method: 'DELETE', headers: authHeader });
+                  await fetchData();
+                  setClearingShrine(false);
+                }}
+                disabled={clearingShrine || offerings.length === 0}
+                style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #fcc', background: '#fff8f8', color: '#c00', fontSize: 13, cursor: clearingShrine || offerings.length === 0 ? 'not-allowed' : 'pointer', fontFamily: FONT, fontWeight: 700, opacity: offerings.length === 0 ? 0.4 : 1 }}
+              >
+                {clearingShrine ? 'Clearing…' : 'Clear all offerings'}
+              </button>
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px,1fr))', gap: 10, marginBottom: 28 }}>
               {OFFERINGS.map((o) => (
                 <div key={o.id} style={{ background: '#fff', border: '1px solid #ddd', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
