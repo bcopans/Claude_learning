@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
-  const { guest_code, name, attending, hotel, dietary, notes } = await req.json();
+  const { guest_code, name, attending, hotel, dietary, notes, trip_tier } = await req.json();
 
   if (!guest_code || !attending) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -10,7 +10,6 @@ export async function POST(req: NextRequest) {
 
   const db = supabaseAdmin();
 
-  // Verify the guest code is valid
   const { data: guest } = await db
     .from('guests')
     .select('code, name')
@@ -22,9 +21,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid guest code' }, { status: 401 });
   }
 
-  // Upsert: one RSVP per guest
   const { error } = await db.from('rsvps').upsert(
-    { guest_code, name: name || guest.name, attending, hotel, dietary, notes },
+    { guest_code, name: name || guest.name, attending, hotel, dietary, notes, trip_tier: trip_tier || null },
     { onConflict: 'guest_code' }
   );
 
@@ -42,7 +40,7 @@ export async function GET(req: NextRequest) {
   const db = supabaseAdmin();
   const { data } = await db
     .from('rsvps')
-    .select('attending, hotel, dietary, notes')
+    .select('attending, hotel, dietary, notes, trip_tier')
     .eq('guest_code', code)
     .single();
 

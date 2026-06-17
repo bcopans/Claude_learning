@@ -21,6 +21,7 @@ create table if not exists rsvps (
   hotel text,
   dietary text,
   notes text,
+  trip_tier text,
   created_at timestamptz default now(),
   unique (guest_code)
 );
@@ -104,9 +105,10 @@ insert into guests (code, name, active, is_admin) values
   ('BEN-HOST', 'Ben', true, true)
 on conflict (code) do update set is_admin = true;
 
--- If upgrading an existing database, run this migration:
+-- If upgrading an existing database, run these migrations:
 -- alter table guests add column if not exists is_admin boolean default false;
 -- update guests set is_admin = true where code = 'BEN-HOST';
+-- alter table rsvps add column if not exists trip_tier text;
 
 -- Add more guests here or use the /admin panel:
 -- insert into guests (code, name, active) values ('BEN-DALTON', 'Dalton', true);

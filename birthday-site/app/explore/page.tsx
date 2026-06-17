@@ -74,7 +74,7 @@ function ExploreContent({ session }: { session: SessionWithRsvp }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [rsvped, setRsvped] = useState(session.rsvped || false);
-  const [rsvpForm, setRsvpForm] = useState({ attend: '', hotel: '', dietary: '', notes: '' });
+  const [rsvpForm, setRsvpForm] = useState({ attend: '', hotel: '', dietary: '', notes: '', trip_tier: '' });
   const [rsvpDone, setRsvpDone] = useState(false);
   const [rsvpErr, setRsvpErr] = useState('');
   const [rsvpLoading, setRsvpLoading] = useState(false);
@@ -100,6 +100,7 @@ function ExploreContent({ session }: { session: SessionWithRsvp }) {
             hotel: rsvp.hotel || '',
             dietary: rsvp.dietary || '',
             notes: rsvp.notes || '',
+            trip_tier: rsvp.trip_tier || '',
           });
           if (rsvp.attending === 'yes') {
             setRsvped(true);
@@ -131,6 +132,7 @@ function ExploreContent({ session }: { session: SessionWithRsvp }) {
           hotel: rsvpForm.hotel,
           dietary: rsvpForm.dietary,
           notes: rsvpForm.notes,
+          trip_tier: rsvpForm.trip_tier || null,
         }),
       });
       if (!res.ok) {
@@ -239,21 +241,224 @@ function ExploreContent({ session }: { session: SessionWithRsvp }) {
       {/* Itinerary */}
       <Sec id="plan" bg={C.green}>
         <Eyebrow color={C.mango}>The plan</Eyebrow>
-        <H2 color={C.cream}>Eight days in Rio</H2>
-        {ITIN.map(([d, t], i) => (
-          <div
-            key={i}
-            style={{
-              display: 'flex',
-              gap: 16,
-              padding: '13px 0',
-              borderBottom: '0.5px solid rgba(255,248,231,0.15)',
-            }}
-          >
-            <div style={{ minWidth: 90, fontSize: 13, fontWeight: 700, color: C.cream }}>{d}</div>
-            <div style={{ fontSize: 15, color: C.mint }}>{t}</div>
+        <H2 color={C.cream}>Choose your adventure</H2>
+
+        {/* Adventure cards */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(210px,1fr))',
+            gap: 12,
+            marginBottom: 24,
+          }}
+        >
+          {([
+            {
+              title: 'Full Trip',
+              dates: 'Feb 3–12 · 10 days',
+              desc: 'The whole experience — sightseeing, all of Carnival, wind-down.',
+              perks: ['Cristo Redentor + favela tour', 'All Carnival events', 'Sambadrome Feb 9', 'Beach wind-down days'],
+              color: C.mango,
+            },
+            {
+              title: 'Carnival Only',
+              dates: 'Feb 6–10 · 5 days',
+              desc: 'Fly in for the core. Every big Carnival night, zero filler.',
+              perks: ['All Carnival events', 'Sambadrome Feb 9', 'Circuit parties', 'Banda de Ipanema'],
+              color: C.coral,
+            },
+          ] as const).map((tier) => (
+            <div
+              key={tier.title}
+              style={{
+                background: 'rgba(255,248,231,0.07)',
+                border: '0.5px solid rgba(255,248,231,0.2)',
+                borderRadius: 16,
+                padding: '18px 16px',
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: "'Archivo Black', sans-serif",
+                  fontSize: 18,
+                  color: tier.color,
+                  marginBottom: 3,
+                }}
+              >
+                {tier.title}
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: C.cream,
+                  letterSpacing: '0.06em',
+                  marginBottom: 10,
+                }}
+              >
+                {tier.dates}
+              </div>
+              <div style={{ fontSize: 13, color: C.mint, lineHeight: 1.55, marginBottom: 14 }}>
+                {tier.desc}
+              </div>
+              {tier.perks.map((p) => (
+                <div
+                  key={p}
+                  style={{ fontSize: 12, color: C.cream, marginBottom: 5, display: 'flex', gap: 7 }}
+                >
+                  <span style={{ color: tier.color, flexShrink: 0 }}>✓</span>
+                  {p}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Feb 9 callout */}
+        <div
+          style={{
+            background: 'rgba(255,94,91,0.1)',
+            border: '0.5px solid rgba(255,94,91,0.45)',
+            borderRadius: 12,
+            padding: '13px 16px',
+            marginBottom: 28,
+            display: 'flex',
+            gap: 12,
+            alignItems: 'flex-start',
+          }}
+        >
+          <div style={{ fontSize: 20 }}>📍</div>
+          <div>
+            <div style={{ fontWeight: 700, color: C.coral, fontSize: 13, marginBottom: 3 }}>
+              The non-negotiable: Tuesday Feb 9
+            </div>
+            <div style={{ fontSize: 13, color: C.mint, lineHeight: 1.5 }}>
+              The Sambadrome camarote is bought per person and sells out months ahead.
+              If you come for nothing else, come for the 9th.
+            </div>
           </div>
-        ))}
+        </div>
+
+        {/* Day-by-day */}
+        {ITIN.map(([d, t, tier], i) => {
+          const isAnchor = tier === 'anchor';
+          const isFullOnly = tier === 'full';
+          const prevTier = i > 0 ? ITIN[i - 1][2] : null;
+          const showJoin = prevTier === 'full' && tier !== 'full';
+          const showDepart = prevTier !== null && prevTier !== 'full' && tier === 'full';
+
+          return (
+            <div key={i}>
+              {showJoin && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    margin: '16px 0 8px',
+                  }}
+                >
+                  <div style={{ height: 1, flex: 1, background: 'rgba(255,94,91,0.4)' }} />
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: C.coral,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Carnival Only joins ↓
+                  </div>
+                  <div style={{ height: 1, flex: 1, background: 'rgba(255,94,91,0.4)' }} />
+                </div>
+              )}
+              {showDepart && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    margin: '8px 0 16px',
+                  }}
+                >
+                  <div style={{ height: 1, flex: 1, background: 'rgba(255,182,39,0.35)' }} />
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: C.mango,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    ↑ Carnival Only departs
+                  </div>
+                  <div style={{ height: 1, flex: 1, background: 'rgba(255,182,39,0.35)' }} />
+                </div>
+              )}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 16,
+                  padding: isAnchor ? '13px 12px' : '13px 0',
+                  borderBottom: '0.5px solid rgba(255,248,231,0.15)',
+                  background: isAnchor ? 'rgba(255,182,39,0.08)' : undefined,
+                  borderRadius: isAnchor ? 8 : undefined,
+                  alignItems: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    minWidth: 90,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: isAnchor ? C.mango : C.cream,
+                  }}
+                >
+                  {d}
+                </div>
+                <div style={{ flex: 1, fontSize: 15, color: C.mint }}>{t}</div>
+                {isFullOnly && (
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: C.mango,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      padding: '2px 8px',
+                      border: '0.5px solid rgba(255,182,39,0.45)',
+                      borderRadius: 99,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Full trip
+                  </div>
+                )}
+                {isAnchor && (
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: C.coral,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      padding: '2px 8px',
+                      border: '0.5px solid rgba(255,94,91,0.5)',
+                      borderRadius: 99,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Everyone
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </Sec>
 
       {/* Hotels */}
@@ -636,6 +841,50 @@ function ExploreContent({ session }: { session: SessionWithRsvp }) {
                       ))}
                     </div>
                   </div>
+                  <div style={{ marginBottom: 18 }}>
+                    <label style={{ fontSize: 13, fontWeight: 700, color: C.cream, display: 'block' }}>
+                      Which option are you doing?
+                    </label>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: 8,
+                        marginTop: 6,
+                      }}
+                    >
+                      {[
+                        ['full', 'Full Trip', 'Feb 3–12'],
+                        ['carnival', 'Carnival Only', 'Feb 6–10'],
+                      ].map(([v, l, sub]) => (
+                        <button
+                          key={v}
+                          onClick={() => setRsvpForm({ ...rsvpForm, trip_tier: v })}
+                          style={{
+                            padding: '10px 10px',
+                            borderRadius: 8,
+                            cursor: 'pointer',
+                            fontFamily: FONT,
+                            border:
+                              rsvpForm.trip_tier === v
+                                ? `1.5px solid ${C.mango}`
+                                : '0.5px solid #1d6b54',
+                            background:
+                              rsvpForm.trip_tier === v
+                                ? 'rgba(255,182,39,0.15)'
+                                : 'rgba(255,248,231,0.06)',
+                            textAlign: 'left',
+                          }}
+                        >
+                          <div style={{ fontSize: 13, fontWeight: 700, color: rsvpForm.trip_tier === v ? C.mango : C.cream }}>
+                            {l}
+                          </div>
+                          <div style={{ fontSize: 11, color: C.mint, marginTop: 2 }}>{sub}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div style={{ marginBottom: 18 }}>
                     <label style={{ fontSize: 13, fontWeight: 700, color: C.cream, display: 'block' }}>
                       Dietary restrictions

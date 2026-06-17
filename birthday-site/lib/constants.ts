@@ -44,17 +44,17 @@ export const GOSPEL = [
   'Bow before the Golden Calf — bringer of joy, light, legend, and a suspiciously good skincare routine.',
 ];
 
-export const ITIN: [string, string][] = [
-  ['Wed Feb 3', 'Arrive in Rio — the trip begins'],
-  ['Thu Feb 4', 'Christ the Redeemer + Ipanema beach'],
-  ['Fri Feb 5', 'Série Ouro warmup (optional)'],
-  ['Sat Feb 6', 'Blocos → Circuit party #1 · 🤠 Cowboys'],
-  ['Sun Feb 7', 'Banda de Ipanema · 🪶 Birds of Paradise'],
-  ["Mon Feb 8", "Rest day + Ben's birthday dinner"],
-  ['Tue Feb 9', '🎉 Sambadrome camarote · 🏛️ Greek Gods'],
-  ['Wed Feb 10', 'Favela tour → Circuit party #2'],
-  ['Thu Feb 11', 'Last full day'],
-  ['Fri Feb 12', 'Fly home'],
+export const ITIN: [string, string, 'full' | 'both' | 'anchor'][] = [
+  ['Wed Feb 3', 'Arrive in Rio — settle in, Ipanema sunset', 'full'],
+  ['Thu Feb 4', 'Cristo Redentor + favela community tour', 'full'],
+  ['Fri Feb 5', 'Beach day + Série Ouro warmup bloco', 'full'],
+  ['Sat Feb 6', 'Blocos → Circuit party #1 · 🤠 Cowboys', 'both'],
+  ['Sun Feb 7', 'Banda de Ipanema · 🪶 Birds of Paradise', 'both'],
+  ['Mon Feb 8', "Rest day + Ben's birthday dinner", 'both'],
+  ['Tue Feb 9', '🎉 Sambadrome camarote · 🏛️ Greek Gods', 'anchor'],
+  ['Wed Feb 10', 'Circuit party #2 · last Carnival night', 'both'],
+  ['Thu Feb 11', 'Recovery + final beach day', 'full'],
+  ['Fri Feb 12', 'Fly home', 'full'],
 ];
 
 export const FAQ = [

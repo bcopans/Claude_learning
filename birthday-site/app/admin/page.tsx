@@ -197,6 +197,8 @@ function AdminContent({ session }: { session: SessionWithRsvp }) {
   attending.forEach((r) => {
     if (r.hotel) hotelCounts[r.hotel] = (hotelCounts[r.hotel] || 0) + 1;
   });
+  const fullTrip = attending.filter((r) => (r as Rsvp & { trip_tier?: string }).trip_tier === 'full').length;
+  const carnivalOnly = attending.filter((r) => (r as Rsvp & { trip_tier?: string }).trip_tier === 'carnival').length;
 
   const offeringCounts: Record<string, number> = {};
   offerings.forEach((o) => {
@@ -413,8 +415,10 @@ function AdminContent({ session }: { session: SessionWithRsvp }) {
               {[
                 ['Coming', attending.length, C.green],
                 ['Not coming', notAttending.length, C.coral],
-                ['Fasano', hotelCounts['fasano'] || 0, C.mango],
-                ['Arpoador', hotelCounts['arpoador'] || 0, C.mango],
+                ['Full Trip', fullTrip, C.mango],
+                ['Carnival Only', carnivalOnly, C.mango],
+                ['Fasano', hotelCounts['fasano'] || 0, '#888'],
+                ['Arpoador', hotelCounts['arpoador'] || 0, '#888'],
               ].map(([l, v, col]) => (
                 <div key={String(l)} style={{ background: '#fff', border: '1px solid #ddd', borderRadius: 10, padding: '12px 18px', textAlign: 'center', minWidth: 90 }}>
                   <div style={{ fontFamily: "'Archivo Black', sans-serif", fontSize: 24, color: String(col) }}>{String(v)}</div>
@@ -426,7 +430,7 @@ function AdminContent({ session }: { session: SessionWithRsvp }) {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: C.green, color: C.cream }}>
-                    {['Name', 'Attending', 'Hotel', 'Dietary', 'Notes', 'Date'].map((h) => (
+                    {['Name', 'Attending', 'Tier', 'Hotel', 'Dietary', 'Notes', 'Date'].map((h) => (
                       <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontFamily: "'Archivo Black', sans-serif", fontSize: 11 }}>{h}</th>
                     ))}
                   </tr>
@@ -440,6 +444,15 @@ function AdminContent({ session }: { session: SessionWithRsvp }) {
                           {r.attending === 'yes' ? '✓ Yes' : '✗ No'}
                         </span>
                       </td>
+                      <td style={{ padding: '9px 12px' }}>
+                        {(r as Rsvp & { trip_tier?: string }).trip_tier === 'full' && (
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: '#fff8e1', color: '#7a5500' }}>Full</span>
+                        )}
+                        {(r as Rsvp & { trip_tier?: string }).trip_tier === 'carnival' && (
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: '#ffe8e8', color: '#b00' }}>Carnival</span>
+                        )}
+                        {!(r as Rsvp & { trip_tier?: string }).trip_tier && <span style={{ color: '#aaa', fontSize: 12 }}>—</span>}
+                      </td>
                       <td style={{ padding: '9px 12px' }}>{r.hotel || '—'}</td>
                       <td style={{ padding: '9px 12px' }}>{r.dietary || '—'}</td>
                       <td style={{ padding: '9px 12px', maxWidth: 200, fontSize: 12, color: '#555' }}>{r.notes || '—'}</td>
@@ -447,7 +460,7 @@ function AdminContent({ session }: { session: SessionWithRsvp }) {
                     </tr>
                   ))}
                   {rsvps.length === 0 && (
-                    <tr><td colSpan={6} style={{ padding: 20, textAlign: 'center', color: '#888' }}>No RSVPs yet.</td></tr>
+                    <tr><td colSpan={7} style={{ padding: 20, textAlign: 'center', color: '#888' }}>No RSVPs yet.</td></tr>
                   )}
                 </tbody>
               </table>
