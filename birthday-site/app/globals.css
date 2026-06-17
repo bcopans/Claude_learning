@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #FFF8E7;
+  color: #1A1008;
+}
+
+input, select, textarea {
+  font-size: 16px !important;
+}
+
+@keyframes dropIn {
+  from {
+    transform: translateX(-50%) translateY(-180px) rotate(0deg) scale(0.4);
+    opacity: 0;
+  }
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes legendPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+details summary::-webkit-details-marker {
+  display: none;
+}
+
+details summary {
+  list-style: none;
+}
+
