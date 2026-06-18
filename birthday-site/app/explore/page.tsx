@@ -758,7 +758,7 @@ function ExploreContent({ session }: { session: SessionWithRsvp }) {
                     <div
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
+                        gridTemplateColumns: '1fr 1fr 1fr',
                         gap: 8,
                         marginTop: 6,
                       }}
@@ -766,6 +766,7 @@ function ExploreContent({ session }: { session: SessionWithRsvp }) {
                       {[
                         ['full', 'Full Trip', 'Feb 3–12'],
                         ['carnival', 'Carnival Only', 'Feb 6–10'],
+                        ['tbd', 'Not sure yet', ''],
                       ].map(([v, l, sub]) => (
                         <button
                           key={v}
