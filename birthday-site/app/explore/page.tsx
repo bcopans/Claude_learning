@@ -764,17 +764,19 @@ function ExploreContent({ session }: { session: SessionWithRsvp }) {
                       }}
                     >
                       {[
-                        ['full', 'Full Trip', 'Feb 3–12'],
-                        ['carnival', 'Carnival Only', 'Feb 6–10'],
-                        ['tbd', 'Not sure yet', ''],
-                      ].map(([v, l, sub]) => (
+                        ['full', 'Full Trip'],
+                        ['carnival', 'Carnival Only'],
+                        ['tbd', 'Not sure yet'],
+                      ].map(([v, l]) => (
                         <button
                           key={v}
                           onClick={() => setRsvpForm({ ...rsvpForm, trip_tier: v })}
                           style={{
-                            padding: '10px 10px',
+                            padding: '10px 8px',
                             borderRadius: 8,
                             cursor: 'pointer',
+                            fontSize: 13,
+                            fontWeight: 500,
                             fontFamily: FONT,
                             border:
                               rsvpForm.trip_tier === v
@@ -784,13 +786,10 @@ function ExploreContent({ session }: { session: SessionWithRsvp }) {
                               rsvpForm.trip_tier === v
                                 ? 'rgba(255,182,39,0.15)'
                                 : 'rgba(255,248,231,0.06)',
-                            textAlign: 'left',
+                            color: rsvpForm.trip_tier === v ? C.mango : C.mint,
                           }}
                         >
-                          <div style={{ fontSize: 13, fontWeight: 700, color: rsvpForm.trip_tier === v ? C.mango : C.cream }}>
-                            {l}
-                          </div>
-                          <div style={{ fontSize: 11, color: C.mint, marginTop: 2 }}>{sub}</div>
+                          {l}
                         </button>
                       ))}
                     </div>
