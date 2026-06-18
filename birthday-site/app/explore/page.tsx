@@ -342,120 +342,30 @@ function ExploreContent({ session }: { session: SessionWithRsvp }) {
         {/* Day-by-day */}
         {ITIN.map(([d, t, tier], i) => {
           const isAnchor = tier === 'anchor';
-          const isFullOnly = tier === 'full';
-          const prevTier = i > 0 ? ITIN[i - 1][2] : null;
-          const showJoin = prevTier === 'full' && tier !== 'full';
-          const showDepart = prevTier !== null && prevTier !== 'full' && tier === 'full';
-
           return (
-            <div key={i}>
-              {showJoin && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    margin: '16px 0 8px',
-                  }}
-                >
-                  <div style={{ height: 1, flex: 1, background: 'rgba(255,94,91,0.4)' }} />
-                  <div
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: C.coral,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    Carnival Only joins ↓
-                  </div>
-                  <div style={{ height: 1, flex: 1, background: 'rgba(255,94,91,0.4)' }} />
-                </div>
-              )}
-              {showDepart && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    margin: '8px 0 16px',
-                  }}
-                >
-                  <div style={{ height: 1, flex: 1, background: 'rgba(255,182,39,0.35)' }} />
-                  <div
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: C.mango,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    ↑ Carnival Only departs
-                  </div>
-                  <div style={{ height: 1, flex: 1, background: 'rgba(255,182,39,0.35)' }} />
-                </div>
-              )}
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                gap: 16,
+                padding: isAnchor ? '13px 12px' : '13px 0',
+                borderBottom: '0.5px solid rgba(255,248,231,0.15)',
+                background: isAnchor ? 'rgba(255,182,39,0.08)' : undefined,
+                borderRadius: isAnchor ? 8 : undefined,
+                alignItems: 'center',
+              }}
+            >
               <div
                 style={{
-                  display: 'flex',
-                  gap: 16,
-                  padding: isAnchor ? '13px 12px' : '13px 0',
-                  borderBottom: '0.5px solid rgba(255,248,231,0.15)',
-                  background: isAnchor ? 'rgba(255,182,39,0.08)' : undefined,
-                  borderRadius: isAnchor ? 8 : undefined,
-                  alignItems: 'center',
+                  minWidth: 90,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: isAnchor ? C.mango : C.cream,
                 }}
               >
-                <div
-                  style={{
-                    minWidth: 90,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: isAnchor ? C.mango : C.cream,
-                  }}
-                >
-                  {d}
-                </div>
-                <div style={{ flex: 1, fontSize: 15, color: C.mint }}>{t}</div>
-                {isFullOnly && (
-                  <div
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: C.mango,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      padding: '2px 8px',
-                      border: '0.5px solid rgba(255,182,39,0.45)',
-                      borderRadius: 99,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    Full trip
-                  </div>
-                )}
-                {isAnchor && (
-                  <div
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: C.coral,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      padding: '2px 8px',
-                      border: '0.5px solid rgba(255,94,91,0.5)',
-                      borderRadius: 99,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    Everyone
-                  </div>
-                )}
+                {d}
               </div>
+              <div style={{ flex: 1, fontSize: 15, color: C.mint }}>{t}</div>
             </div>
           );
         })}
