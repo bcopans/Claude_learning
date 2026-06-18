@@ -222,7 +222,7 @@ function ShrineContent({ session }: { session: SessionWithRsvp }) {
               fontFamily: FONT,
             }}
           >
-            {muted ? '🔇 Muted' : '🔊 Sound on'}
+            {muted ? '🔇 Reactions off' : '🔊 Reactions on'}
           </button>
         </div>
 
@@ -269,7 +269,7 @@ function ShrineContent({ session }: { session: SessionWithRsvp }) {
             <img
               src="/golden-calf.png"
               alt="The Golden Calf"
-              style={{ width: 'min(320px,76%)', display: 'block', margin: '0 auto' }}
+              style={{ width: 'min(320px,76%)', display: 'block', margin: '0 auto', clipPath: 'inset(0 0 8px 0)' }}
             />
             {reaction && (
               <div
